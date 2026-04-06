@@ -216,3 +216,13 @@ export interface Message {
   text: string;
   createdAt: number;
 }
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  type: 'deposit' | 'withdrawal' | 'payment' | 'reward';
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  description: string;
+  createdAt: number;
+}

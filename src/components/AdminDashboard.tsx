@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShieldCheck, UserCheck, UserX, Search, Filter, Clock, CheckCircle2, XCircle, AlertCircle, Eye, X, Briefcase, MessageSquare, Megaphone, Send } from 'lucide-react';
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, addDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, addDoc, orderBy, limit, getDoc } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
 import { Job, Advertisement } from '../types';
 
 export default function AdminDashboard() {
   const { profile, loading: firebaseLoading } = useFirebase();
-  const [activeTab, setActiveTab] = useState<'users' | 'jobs' | 'messages' | 'ads'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'jobs' | 'messages' | 'ads' | 'transactions'>('users');
   const [users, setUsers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'rejected' | 'approved'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,12 +57,19 @@ export default function AdminDashboard() {
       console.error("Error in messages listener:", error);
     });
 
+    const unsubTransactions = onSnapshot(query(collection(db, 'transactions'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error in transactions listener:", error);
+    });
+
     setLoading(false);
     return () => {
       unsubUsers();
       unsubJobs();
       unsubAds();
       unsubMessages();
+      unsubTransactions();
     };
   }, [firebaseLoading, isAdmin]);
 
@@ -152,6 +160,12 @@ export default function AdminDashboard() {
         const matchesSearch = !searchQuery || ad.title.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesFilter && matchesSearch;
       });
+    } else if (activeTab === 'transactions') {
+      return transactions.filter(tx => {
+        const matchesFilter = filter === 'all' || tx.status === filter;
+        const matchesSearch = !searchQuery || tx.description.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
+      });
     } else {
       return messages.filter(msg => {
         const matchesFilter = filter === 'all' || (filter === 'pending' ? !msg.replied : msg.replied);
@@ -193,17 +207,18 @@ export default function AdminDashboard() {
             <h1 className="text-4xl font-black tracking-tighter text-gray-900">Bảng điều khiển</h1>
           </div>
 
-          <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-gray-100 gap-1">
+          <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-gray-100 gap-1 overflow-x-auto">
             {[
               { id: 'users', label: 'Người dùng', icon: UserCheck },
               { id: 'jobs', label: 'Công việc', icon: Briefcase },
               { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
               { id: 'ads', label: 'Quảng cáo', icon: Megaphone },
+              { id: 'transactions', label: 'Giao dịch', icon: CheckCircle2 },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id as any); setFilter('pending'); }}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
                   activeTab === tab.id 
                   ? 'bg-[#4F46E5] text-white shadow-lg shadow-indigo-100' 
                   : 'text-gray-500 hover:bg-gray-50'
@@ -391,6 +406,76 @@ export default function AdminDashboard() {
                     <MessageSquare size={14} /> {msg.replied ? 'Xem lại' : 'Trả lời'}
                   </button>
                 </div>
+              </motion.div>
+            ))}
+
+            {activeTab === 'transactions' && filteredData().map((tx: any) => (
+              <motion.div
+                key={tx.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-indigo-100/50 transition-all group"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{tx.description}</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{new Date(tx.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                    tx.status === 'completed' ? 'bg-green-50 text-green-600 border-green-100' : 
+                    tx.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                    'bg-red-50 text-red-600 border-red-100'
+                  }`}>
+                    {tx.status === 'completed' ? 'Thành công' : tx.status === 'pending' ? 'Chờ duyệt' : 'Thất bại'}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-gray-500">Số tiền:</span>
+                  <span className="font-black text-lg text-indigo-600">{tx.amount.toLocaleString()}đ</span>
+                </div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-gray-500">Mã giao dịch:</span>
+                  <span className="font-mono text-xs text-gray-400">{tx.id}</span>
+                </div>
+                {tx.status === 'pending' && (
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, 'transactions', tx.id), { status: 'failed' });
+                        } catch (error) {
+                          console.error("Error updating transaction:", error);
+                        }
+                      }}
+                      className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-bold hover:bg-red-100 transition-colors"
+                    >
+                      Từ chối
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          // Approve transaction
+                          await updateDoc(doc(db, 'transactions', tx.id), { status: 'completed' });
+                          
+                          // Update user balance
+                          const userRef = doc(db, 'users', tx.userId);
+                          const userDoc = await getDoc(userRef);
+                          if (userDoc.exists()) {
+                            const currentBalance = userDoc.data().balance || 0;
+                            await updateDoc(userRef, { balance: currentBalance + tx.amount });
+                          }
+                        } catch (error) {
+                          console.error("Error approving transaction:", error);
+                        }
+                      }}
+                      className="flex-[2] py-3 bg-indigo-600 text-white rounded-2xl text-xs font-bold hover:bg-indigo-700 transition-colors"
+                    >
+                      Phê duyệt
+                    </button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>

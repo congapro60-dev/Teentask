@@ -161,6 +161,21 @@
         "read": { "type": "boolean" }
       },
       "required": ["id", "userId", "title", "message", "createdAt", "read"]
+    },
+    "Transaction": {
+      "title": "Wallet Transaction",
+      "description": "A transaction in the user's wallet.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["deposit", "withdrawal", "payment", "reward"] },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "description": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "type", "amount", "status", "description", "createdAt"]
     }
   },
   "firestore": {
@@ -199,6 +214,10 @@
     "ratings/{ratingId}": {
       "schema": "Rating",
       "description": "Trust ratings between users."
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Wallet transactions."
     }
   }
 }

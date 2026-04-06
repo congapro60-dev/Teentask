@@ -28,6 +28,7 @@ import Tasks from './components/Tasks';
 import Companies from './components/Companies';
 import Saved from './components/Saved';
 import Vip from './components/Vip';
+import Wallet from './components/Wallet';
 import { FirebaseProvider, useFirebase } from './components/FirebaseProvider';
 
 function AppContent() {
@@ -226,6 +227,7 @@ function AppContent() {
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/saved" element={<Saved />} />
                 <Route path="/vip" element={<Vip />} />
+                <Route path="/wallet" element={<Wallet />} />
                 {userRole === 'business' ? (
                   <>
                     <Route path="/jobs-manage" element={<ManageJobs />} />

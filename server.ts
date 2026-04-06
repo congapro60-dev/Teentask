@@ -131,11 +131,144 @@ cron.schedule("0 * * * *", sendParentReminders);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
+
+  // Middleware
+  app.use(express.json());
 
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Webhook endpoint for automated deposits (e.g., PayOS / SePay)
+  app.post("/api/webhooks/payment", async (req, res) => {
+    try {
+      // Verify API Key from SePay
+      const authHeader = req.headers.authorization;
+      const expectedApiKey = process.env.SEPAY_API_KEY;
+
+      if (!expectedApiKey) {
+        console.warn("SEPAY_API_KEY is not set in environment variables!");
+      } else if (!authHeader || authHeader !== `Apikey ${expectedApiKey}`) {
+        console.error("Unauthorized webhook attempt. Invalid API Key.");
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const data = req.body;
+      console.log("Received webhook data:", data);
+
+      // Extract transaction details (Structure depends on PayOS/SePay)
+      // Example structure for SePay/PayOS:
+      const amount = data.transferAmount || data.amount;
+      const description = data.content || data.description; // e.g., "NAP A1B2C3"
+      const referenceId = data.referenceCode || data.id;
+
+      if (!amount || !description) {
+        return res.status(400).json({ error: "Invalid data" });
+      }
+
+      // Check if transaction was already processed (Idempotency)
+      const txRef = db.collection("transactions").doc(String(referenceId));
+      const txDoc = await txRef.get();
+      if (txDoc.exists) {
+        return res.status(200).json({ message: "Transaction already processed" });
+      }
+
+      // Find user by matching the description (e.g., "NAP [UID]")
+      // This is a simplified matching. In production, use regex to extract the exact UID code.
+      const usersSnapshot = await db.collection("users").get();
+      let matchedUserId = null;
+      
+      for (const doc of usersSnapshot.docs) {
+        const uidCode = doc.id.substring(0, 6).toUpperCase();
+        if (description.toUpperCase().includes(`NAP ${uidCode}`)) {
+          matchedUserId = doc.id;
+          break;
+        }
+      }
+
+      if (matchedUserId) {
+        // 1. Create completed transaction
+        await txRef.set({
+          userId: matchedUserId,
+          type: 'deposit',
+          amount: Number(amount),
+          status: 'completed',
+          description: `Nạp tự động: ${description}`,
+          createdAt: Date.now()
+        });
+
+        // 2. Update user balance
+        const userRef = db.collection("users").doc(matchedUserId);
+        const userDoc = await userRef.get();
+        const currentBalance = userDoc.data()?.balance || 0;
+        await userRef.update({ balance: currentBalance + Number(amount) });
+
+        console.log(`Successfully processed deposit of ${amount} for user ${matchedUserId}`);
+      } else {
+        console.warn(`Could not match transaction description "${description}" to any user.`);
+        // Save as pending/unmatched for manual review
+        await txRef.set({
+          type: 'deposit',
+          amount: Number(amount),
+          status: 'pending',
+          description: `Nạp tự động (Không rõ User): ${description}`,
+          createdAt: Date.now()
+        });
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Webhook processing error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // API for Withdrawal Requests
+  app.post("/api/withdraw", async (req, res) => {
+    try {
+      const { userId, amount, bankInfo } = req.body;
+      
+      if (!userId || !amount || amount < 50000) {
+        return res.status(400).json({ error: "Invalid withdrawal request" });
+      }
+
+      const userRef = db.collection("users").doc(userId);
+      const userDoc = await userRef.get();
+      
+      if (!userDoc.exists) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const currentBalance = userDoc.data()?.balance || 0;
+      if (currentBalance < amount) {
+        return res.status(400).json({ error: "Insufficient balance" });
+      }
+
+      // 1. Deduct balance immediately
+      await userRef.update({ balance: currentBalance - amount });
+
+      // 2. Create pending withdrawal transaction
+      await db.collection("transactions").add({
+        userId,
+        type: 'withdrawal',
+        amount: amount,
+        status: 'pending',
+        description: `Rút tiền về ${bankInfo.bankName} - ${bankInfo.accountNo}`,
+        bankInfo: bankInfo,
+        createdAt: Date.now()
+      });
+
+      // NOTE: Automated payouts via banking APIs are highly restricted.
+      // For MVP, this stays 'pending' until Admin manually transfers the money
+      // and clicks "Approve" in the Admin Dashboard.
+
+      res.status(200).json({ success: true, message: "Withdrawal requested successfully" });
+    } catch (error) {
+      console.error("Withdrawal error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   // Manual trigger for testing (optional)

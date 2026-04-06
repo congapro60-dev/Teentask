@@ -152,6 +152,14 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <button 
+            onClick={() => navigate('/wallet')}
+            className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all relative group"
+            title="Ví của tôi"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+          </button>
+
+          <button 
             onClick={() => navigate('/profile')}
             className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-transparent hover:border-gray-300 transition-all relative"
           >
