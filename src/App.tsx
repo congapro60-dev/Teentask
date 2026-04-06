@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { GraduationCap, ShieldCheck, Building2, ChevronRight, ArrowLeft, Smartphone, Monitor, ShieldAlert } from 'lucide-react';
+import { GraduationCap, ShieldCheck, Building2, ChevronRight, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Layout from './components/Layout';
 import Home from './components/Home';
@@ -34,7 +34,6 @@ function AppContent() {
   const { user, profile, loading, login, updateProfile } = useFirebase();
   const [view, setView] = useState<'guest' | 'login'>('guest');
   const [selectedRole, setSelectedRole] = useState<'student' | 'parent' | 'business' | 'admin' | null>(null);
-  const [viewMode, setViewMode] = useState<'web' | 'mobile'>('web');
   const [skipVerification, setSkipVerification] = useState(false);
 
   const ADMIN_EMAIL = "cuong.vuviet@thedeweyschools.edu.vn";
@@ -44,10 +43,6 @@ function AppContent() {
   const isAdmin = profile?.role === 'admin' || userEmailLower === ADMIN_EMAIL.toLowerCase() || isBoss;
 
   const [loginError, setLoginError] = useState<string | null>(null);
-
-  const toggleViewMode = () => {
-    setViewMode(prev => prev === 'web' ? 'mobile' : 'web');
-  };
 
   const handleLogin = async () => {
     setLoginError(null);
@@ -62,16 +57,6 @@ function AppContent() {
     }
   };
 
-  const ViewToggle = () => (
-    <button
-      onClick={toggleViewMode}
-      className="fixed bottom-24 right-6 z-[100] p-4 bg-white rounded-full shadow-2xl border border-gray-100 text-[#4F46E5] hover:scale-110 transition-all active:scale-95 flex items-center gap-2 font-bold text-xs"
-    >
-      {viewMode === 'web' ? <Smartphone size={20} /> : <Monitor size={20} />}
-      {viewMode === 'web' ? 'Mobile View' : 'Web View'}
-    </button>
-  );
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
@@ -80,15 +65,12 @@ function AppContent() {
     );
   }
 
-  const appWrapperClass = viewMode === 'mobile' 
-    ? "max-w-[430px] mx-auto min-h-screen shadow-2xl border-x border-gray-100 bg-white relative"
-    : "min-h-screen bg-[#F8FAFC] relative";
+  const appWrapperClass = "min-h-screen bg-[#F8FAFC] relative";
 
   if (!user) {
     return (
-      <div className={viewMode === 'mobile' ? "bg-gray-100 min-h-screen py-8" : "bg-[#F8FAFC] min-h-screen"}>
+      <div className="bg-[#F8FAFC] min-h-screen">
         <div className={appWrapperClass}>
-          <ViewToggle />
           <Layout>
             <AnimatePresence mode="wait">
               <motion.div
@@ -172,9 +154,8 @@ function AppContent() {
 
   if (user && (!profile || !profile.role)) {
     return (
-      <div className={viewMode === 'mobile' ? "bg-gray-100 min-h-screen py-8" : "bg-[#0F0C29] min-h-screen"}>
+      <div className="bg-[#0F0C29] min-h-screen">
         <div className={appWrapperClass}>
-          <ViewToggle />
           <RoleSelection 
             onSelect={async (role) => {
               const BOSS_EMAIL = "congapro60@gmail.com";
@@ -204,9 +185,8 @@ function AppContent() {
 
   if (needsVerification) {
     return (
-      <div className={viewMode === 'mobile' ? "bg-gray-100 min-h-screen py-8" : "bg-white min-h-screen"}>
+      <div className="bg-white min-h-screen">
         <div className={appWrapperClass}>
-          <ViewToggle />
           <VerificationFlow onClose={() => setSkipVerification(true)} />
         </div>
       </div>
@@ -214,9 +194,8 @@ function AppContent() {
   }
 
   return (
-    <div className={viewMode === 'mobile' ? "bg-gray-100 min-h-screen py-8" : "bg-[#F8FAFC] min-h-screen"}>
+    <div className="bg-[#F8FAFC] min-h-screen">
       <div className={appWrapperClass}>
-        <ViewToggle />
         <Layout>
           <AnimatePresence mode="wait">
             <motion.div
