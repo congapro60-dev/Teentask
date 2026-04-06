@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from './FirebaseProvider';
-import { motion, AnimatePresence } from 'motion/react';
-import { Bell, CheckCircle2, Clock, Briefcase, GraduationCap, Star, Search, Filter, MoreHorizontal, Trash2, Check } from 'lucide-react';
+import { Bell, CheckCircle2, Briefcase, Star, GraduationCap, MoreHorizontal } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-
 import { useNavigate } from 'react-router-dom';
 
 interface Notification {
@@ -18,6 +16,7 @@ interface Notification {
   createdAt: number;
   link?: string;
   metadata?: any;
+  senderAvatar?: string;
 }
 
 export default function Notifications() {
@@ -55,6 +54,7 @@ export default function Notifications() {
             type: 'application_success',
             read: false,
             createdAt: Date.now() - 1000 * 60 * 30, // 30 mins ago
+            senderAvatar: 'https://picsum.photos/seed/vinfast/100/100'
           },
           {
             id: '2',
@@ -64,6 +64,7 @@ export default function Notifications() {
             type: 'new_job',
             read: true,
             createdAt: Date.now() - 1000 * 60 * 60 * 2, // 2 hours ago
+            senderAvatar: 'https://picsum.photos/seed/fpt/100/100'
           },
           {
             id: '3',
@@ -73,6 +74,7 @@ export default function Notifications() {
             type: 'job_approval',
             read: false,
             createdAt: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
+            senderAvatar: 'https://picsum.photos/seed/admin/100/100'
           }
         ];
         setNotifications(mockNotifs);
@@ -92,20 +94,13 @@ export default function Notifications() {
     }
   };
 
-  const markAllAsRead = async () => {
-    const unread = notifications.filter(n => !n.read);
-    for (const n of unread) {
-      markAsRead(n.id);
-    }
-  };
-
-  const getIcon = (type: Notification['type']) => {
+  const getBadgeIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'job_approval': return <CheckCircle2 className="text-emerald-500" size={20} />;
-      case 'application_success': return <Briefcase className="text-blue-500" size={20} />;
-      case 'new_job': return <Star className="text-amber-500" size={20} />;
-      case 'review': return <GraduationCap className="text-purple-500" size={20} />;
-      default: return <Bell className="text-slate-400" size={20} />;
+      case 'job_approval': return <div className="bg-emerald-500 p-1 rounded-full text-white"><CheckCircle2 size={12} /></div>;
+      case 'application_success': return <div className="bg-blue-500 p-1 rounded-full text-white"><Briefcase size={12} /></div>;
+      case 'new_job': return <div className="bg-amber-500 p-1 rounded-full text-white"><Star size={12} /></div>;
+      case 'review': return <div className="bg-purple-500 p-1 rounded-full text-white"><GraduationCap size={12} /></div>;
+      default: return <div className="bg-gray-500 p-1 rounded-full text-white"><Bell size={12} /></div>;
     }
   };
 
@@ -115,123 +110,90 @@ export default function Notifications() {
 
   if (loading && notifications.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1877F2]"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24">
+    <div className="min-h-screen bg-white pb-20 pt-4 px-2 sm:px-4 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="bg-slate-900/50 p-8 pb-12 rounded-b-[64px] border-b border-white/5 sticky top-0 z-30 backdrop-blur-2xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] -z-10"></div>
-        
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-5 bg-primary rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
-            <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Cập nhật mới nhất</span>
-          </div>
-          <button 
-            onClick={markAllAsRead}
-            className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
-          >
-            Đánh dấu tất cả đã đọc
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-4 px-2">
+        <h1 className="text-2xl font-bold text-gray-900">Thông báo</h1>
+        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+          <MoreHorizontal size={20} />
+        </button>
+      </div>
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-black tracking-tighter text-white">Thông báo</h1>
-          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-            <button 
-              onClick={() => setFilter('all')}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                filter === 'all' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Tất cả
-            </button>
-            <button 
-              onClick={() => setFilter('unread')}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                filter === 'unread' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Chưa đọc
-            </button>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4 px-2">
+        <button 
+          onClick={() => setFilter('all')}
+          className={`px-4 py-1.5 rounded-full text-[15px] font-semibold transition-colors ${
+            filter === 'all' ? 'bg-blue-50 text-[#1877F2]' : 'bg-transparent text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          Tất cả
+        </button>
+        <button 
+          onClick={() => setFilter('unread')}
+          className={`px-4 py-1.5 rounded-full text-[15px] font-semibold transition-colors ${
+            filter === 'unread' ? 'bg-blue-50 text-[#1877F2]' : 'bg-transparent text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          Chưa đọc
+        </button>
       </div>
 
       {/* Notifications List */}
-      <div className="px-4 sm:px-8 py-10 space-y-4">
+      <div className="space-y-1">
+        <div className="px-2 mb-2">
+          <h2 className="text-[17px] font-semibold text-gray-900">Mới</h2>
+        </div>
+
         {filteredNotifications.length > 0 ? (
-          <AnimatePresence mode="popLayout">
-            {filteredNotifications.map((notif, i) => (
-              <motion.div
-                key={notif.id}
-                layout
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: i * 0.05 }}
-                className={`group relative p-6 rounded-[32px] border transition-all cursor-pointer overflow-hidden ${
-                  notif.read 
-                    ? 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05]' 
-                    : 'bg-primary/5 border-primary/20 hover:bg-primary/10 ring-1 ring-primary/10'
-                }`}
-                onClick={() => {
-                  markAsRead(notif.id);
-                  if (notif.link) navigate(notif.link);
-                }}
-              >
-                <div className="flex gap-6 items-start relative z-10">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner ${
-                    notif.read ? 'bg-slate-900 border-white/5' : 'bg-primary/20 border-primary/20'
-                  }`}>
-                    {getIcon(notif.type)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className={`font-black tracking-tight text-base ${notif.read ? 'text-slate-300' : 'text-white'}`}>
-                        {notif.title}
-                      </h3>
-                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest pt-1 whitespace-nowrap">
-                        {formatDistanceToNow(notif.createdAt, { addSuffix: true, locale: vi })}
-                      </span>
-                    </div>
-                    <p className={`text-sm leading-relaxed mb-3 ${notif.read ? 'text-slate-500' : 'text-slate-400 font-medium'}`}>
-                      {notif.message}
-                    </p>
-                    
-                    {!notif.read && (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                        <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Mới</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-3 text-slate-600 hover:text-white hover:bg-white/10 rounded-xl transition-all">
-                      <MoreHorizontal size={18} />
-                    </button>
-                  </div>
+          filteredNotifications.map((notif) => (
+            <div
+              key={notif.id}
+              onClick={() => {
+                if (!notif.read) markAsRead(notif.id);
+                if (notif.link) navigate(notif.link);
+              }}
+              className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer relative"
+            >
+              {/* Avatar & Badge */}
+              <div className="relative shrink-0 mt-1">
+                <img 
+                  src={notif.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.title)}&background=random`} 
+                  alt="" 
+                  className="w-14 h-14 rounded-full object-cover border border-gray-100"
+                />
+                <div className="absolute -bottom-1 -right-1 border-2 border-white rounded-full">
+                  {getBadgeIcon(notif.type)}
                 </div>
+              </div>
 
-                {/* Hover Glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-32 text-slate-600">
-            <div className="w-32 h-32 bg-white/5 rounded-[48px] flex items-center justify-center mb-8 border border-white/5 shadow-inner">
-              <Bell size={48} strokeWidth={1.5} className="opacity-20" />
+              {/* Content */}
+              <div className="flex-1 min-w-0 pr-6">
+                <p className="text-[15px] text-gray-900 leading-tight mb-1">
+                  <span className="font-semibold">{notif.title}</span> {notif.message}
+                </p>
+                <span className={`text-[13px] ${notif.read ? 'text-gray-500' : 'text-[#1877F2] font-semibold'}`}>
+                  {formatDistanceToNow(notif.createdAt, { addSuffix: true, locale: vi })}
+                </span>
+              </div>
+
+              {/* Unread Dot */}
+              {!notif.read && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#1877F2] rounded-full"></div>
+              )}
             </div>
-            <p className="text-sm font-black uppercase tracking-[0.3em]">Không có thông báo nào</p>
-            <p className="text-[10px] font-bold mt-3 uppercase tracking-widest text-slate-700">Bạn sẽ nhận được thông báo khi có cập nhật mới</p>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <Bell size={48} className="text-gray-300 mb-4" />
+            <p className="text-[15px] font-semibold text-gray-900">Bạn không có thông báo mới</p>
           </div>
         )}
       </div>

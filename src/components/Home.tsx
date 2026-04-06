@@ -108,25 +108,6 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button 
-              onClick={() => navigate('/notifications')}
-              className="md:hidden w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 relative"
-            >
-              <Bell size={20} />
-              <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-            <div className="flex -space-x-2">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 overflow-hidden">
-                  <img src={`https://i.pravatar.cc/100?u=${i}`} alt="user" />
-                </div>
-              ))}
-              <div className="w-8 h-8 rounded-full border-2 border-white bg-[#1877F2] flex items-center justify-center text-[10px] font-bold text-white">
-                +12
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
