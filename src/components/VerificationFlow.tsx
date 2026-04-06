@@ -248,7 +248,13 @@ export default function VerificationFlow({ onClose }: VerificationFlowProps) {
             <h2 className="text-3xl font-black text-gray-900">Gửi thành công!</h2>
             <p className="text-gray-500">Thông tin của bạn đã được gửi. Bạn có thể bắt đầu sử dụng ứng dụng ngay bây giờ.</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  window.location.reload();
+                }
+              }}
               className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100"
             >
               Vào ứng dụng

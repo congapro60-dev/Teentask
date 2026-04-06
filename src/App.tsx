@@ -182,7 +182,8 @@ function AppContent() {
   const userRole = profile?.role || 'student';
 
   // Verification Check: Only show flow if user hasn't submitted yet
-  const needsVerification = userRole !== 'admin' && (!profile?.verificationStatus || profile?.verificationStatus === 'pending') && !skipVerification;
+  const hasSubmittedVerification = profile?.verificationSubmittedAt != null;
+  const needsVerification = userRole !== 'admin' && !hasSubmittedVerification && !skipVerification;
 
   if (needsVerification) {
     return (
