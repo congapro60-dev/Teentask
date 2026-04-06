@@ -57,7 +57,8 @@ service cloud.firestore {
       return isAuthenticated() && 
         ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin') ||
          isBoss() ||
-         (request.auth.token.email == "cuong.vuviet@thedeweyschools.edu.vn"));
+         (request.auth.token.email == "cuong.vuviet@thedeweyschools.edu.vn") ||
+         (request.auth.token.email == "vuvietcuonglmnx@gmail.com"));
     }
 
     function isBusiness() {
@@ -85,8 +86,11 @@ service cloud.firestore {
       allow list: if isAuthenticated();
       allow create: if isOwner(userId);
       allow update: if isBoss() || 
-                    (isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
-                    (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'role', 'balance']));
+                    (isAdmin() && resource.data.email != "congapro60@gmail.com") ||
+                    (isOwner(userId) && 
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'balance']) &&
+                      (request.resource.data.role == resource.data.role || (resource.data.role != 'admin' && request.resource.data.role != 'admin'))
+                    );
     }
 
     match /ratings/{ratingId} {

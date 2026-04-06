@@ -137,6 +137,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       const BOSS_EMAIL = "congapro60@gmail.com";
       const ADMIN_EMAIL = "cuong.vuviet@thedeweyschools.edu.vn";
+      const ADMIN_EMAIL_2 = "vuvietcuonglmnx@gmail.com";
       
       const path = `users/${user.uid}`;
       const profileRef = doc(db, 'users', user.uid);
@@ -151,7 +152,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       const userEmailLower = user.email?.toLowerCase();
       const isBoss = userEmailLower === BOSS_EMAIL.toLowerCase();
-      const isPredefinedAdmin = userEmailLower === ADMIN_EMAIL.toLowerCase();
+      const isPredefinedAdmin = userEmailLower === ADMIN_EMAIL.toLowerCase() || userEmailLower === ADMIN_EMAIL_2.toLowerCase();
       const isAuthorizedAdmin = isBoss || isPredefinedAdmin || (profileSnap.exists() && profileSnap.data()?.role === 'admin');
 
       if (selectedRole === 'admin' && !isAuthorizedAdmin) {
