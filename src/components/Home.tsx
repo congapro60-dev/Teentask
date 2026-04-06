@@ -93,13 +93,13 @@ export default function Home() {
     <div className="pb-20">
       {/* Welcome & Quick Stats */}
       <section className="px-4 sm:px-6 py-6 bg-white border-b border-gray-100 mb-4">
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex-1">
+        <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
+          <div className="flex-1 min-w-[200px]">
             <h2 className="text-xs text-gray-400 font-black uppercase tracking-[0.2em] mb-1">Chào buổi sáng,</h2>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-2">
-              {profile?.displayName || 'TeenTasker'} 
-              {profile?.isVip && <Star size={24} className="text-amber-500" fill="currentColor" />}
-              <span className="text-[#1877F2]">👋</span>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-2 flex-wrap">
+              <span className="truncate max-w-full">{profile?.displayName || 'TeenTasker'}</span>
+              {profile?.isVip && <Star size={24} className="text-amber-500 shrink-0" fill="currentColor" />}
+              <span className="text-[#1877F2] shrink-0">👋</span>
             </h1>
             {profile?.isVip && (
               <div className="mt-1 flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-amber-600 text-[8px] font-black uppercase tracking-widest w-fit">
@@ -108,7 +108,7 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <button 
               onClick={() => navigate('/notifications')}
               className="md:hidden w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 relative"
