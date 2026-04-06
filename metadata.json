@@ -1,0 +1,7 @@
+{
+  "name": "TeenTask ver3",
+  "description": "A Super App for Gen Z (14-18) in Vietnam, combining a freelance marketplace with job shadowing opportunities, parental verification, and a robust trust score system.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

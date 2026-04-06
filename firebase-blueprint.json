@@ -1,0 +1,204 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user information and roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["student", "parent", "business", "admin"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "verificationStatus": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] },
+        "fullName": { "type": "string" },
+        "idNumber": { "type": "string" },
+        "idCardPhoto": { "type": "string" },
+        "dob": { "type": "string" },
+        "parentEmail": { "type": "string", "format": "email" },
+        "trustScore": { "type": "number" },
+        "bio": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Job": {
+      "title": "Job Posting",
+      "description": "Freelance jobs for Gen Z.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "businessId": { "type": "string" },
+        "businessName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "salary": { "type": "number" },
+        "slotsTotal": { "type": "number" },
+        "slotsFilled": { "type": "number" },
+        "deadline": { "type": "number" },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["online", "offline"] },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "closed"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "businessId", "title", "salary", "deadline", "status", "createdAt"]
+    },
+    "ShadowingEvent": {
+      "title": "Shadowing Event",
+      "description": "Job shadowing opportunities.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mentorId": { "type": "string" },
+        "mentorName": { "type": "string" },
+        "companyName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "number" },
+        "price": { "type": "number" },
+        "slotsTotal": { "type": "number" },
+        "slotsRemaining": { "type": "number" },
+        "location": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "mentorId", "title", "date", "price", "createdAt"]
+    },
+    "Application": {
+      "title": "Job Application",
+      "description": "Student applications for jobs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "jobId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "portfolioUrl": { "type": "string" },
+        "parentStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "finalStatus": { "type": "string", "enum": ["pending", "accepted", "rejected", "completed"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "jobId", "studentId", "parentStatus", "finalStatus", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat Conversation",
+      "description": "A conversation between two users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "participantDetails": { "type": "object" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "number" },
+        "relatedTo": { "type": "object" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "participants", "createdAt"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "A single message in a chat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "chatId", "senderId", "text", "createdAt"]
+    },
+    "Review": {
+      "title": "Company Review",
+      "description": "Student reviews for businesses.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "businessId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentPhoto": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "jobId": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "businessId", "studentId", "rating", "comment", "jobId", "createdAt"]
+    },
+    "Rating": {
+      "title": "Trust Rating",
+      "description": "Ratings given by students/parents to businesses or vice versa after a transaction.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fromId": { "type": "string" },
+        "fromName": { "type": "string" },
+        "toId": { "type": "string" },
+        "jobId": { "type": "string" },
+        "score": { "type": "number", "minimum": 1, "maximum": 5 },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "fromId", "toId", "score", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notification for users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "applicationId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "title", "message", "createdAt", "read"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles by UID."
+    },
+    "jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Job postings."
+    },
+    "shadowing_events/{eventId}": {
+      "schema": "ShadowingEvent",
+      "description": "Shadowing events."
+    },
+    "applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Job applications."
+    },
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Chat conversations."
+    },
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a chat."
+    },
+    "reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Company reviews."
+    },
+    "notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "In-app notifications for users."
+    },
+    "ratings/{ratingId}": {
+      "schema": "Rating",
+      "description": "Trust ratings between users."
+    }
+  }
+}
