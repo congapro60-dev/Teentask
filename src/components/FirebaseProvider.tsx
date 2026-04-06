@@ -165,7 +165,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           email: user.email || '',
           displayName: user.displayName || 'TeenTasker',
           photoURL: user.photoURL || '',
-          trustScore: 500,
+          trustScore: 0,
           skills: [],
           role: selectedRole || 'student',
           createdAt: Date.now(),

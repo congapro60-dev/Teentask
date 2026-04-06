@@ -89,6 +89,14 @@ export default function Home() {
     );
   };
 
+  const getUserLevel = (score: number) => {
+    if (score < 100) return { title: 'Tân binh', color: 'bg-gray-100 text-gray-600 border-gray-200' };
+    if (score < 300) return { title: 'Thực tập sinh', color: 'bg-blue-50 text-[#1877F2] border-blue-200' };
+    if (score < 600) return { title: 'Nhân viên', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' };
+    if (score < 1000) return { title: 'Chuyên gia', color: 'bg-purple-50 text-purple-600 border-purple-200' };
+    return { title: 'Bậc thầy', color: 'bg-amber-50 text-amber-600 border-amber-200' };
+  };
+
   return (
     <div className="pb-20">
       {/* Welcome & Quick Stats */}
@@ -108,6 +116,17 @@ export default function Home() {
               </div>
             )}
           </div>
+          
+          <div className="flex items-center gap-3 shrink-0">
+            {profile && (
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Cấp độ</span>
+                <div className={`px-3 py-1.5 rounded-xl border font-bold text-xs shadow-sm ${getUserLevel(profile.trustScore).color}`}>
+                  {getUserLevel(profile.trustScore).title}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -124,7 +143,7 @@ export default function Home() {
             className="bg-amber-50 p-3 rounded-2xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
           >
             <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1">Điểm</p>
-            <p className="text-xl font-black text-amber-600">{profile?.trustScore || 850}</p>
+            <p className="text-xl font-black text-amber-600">{profile?.trustScore || 0}</p>
           </div>
         </div>
       </section>
