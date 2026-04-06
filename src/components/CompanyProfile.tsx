@@ -145,7 +145,7 @@ export default function CompanyProfile() {
           const avg = fetchedRatings.reduce((acc, r) => acc + r.score, 0) / fetchedRatings.length;
           setAverageRating(Number(avg.toFixed(1)));
         } else {
-          setAverageRating(info?.trustScore || 4.5);
+          setAverageRating(info?.trustScore ?? 0);
         }
 
         // If no user profile found, extract info from their first job posting

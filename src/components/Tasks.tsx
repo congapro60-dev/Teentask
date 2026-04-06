@@ -30,6 +30,18 @@ export default function Tasks() {
 
   const filteredTasks = tasks.filter(t => t.type === activeTab);
 
+  const getUserLevelInfo = (score: number) => {
+    if (score < 100) return { title: 'Tân binh', min: 0, max: 100 };
+    if (score < 300) return { title: 'Thực tập sinh', min: 100, max: 300 };
+    if (score < 600) return { title: 'Nhân viên', min: 300, max: 600 };
+    if (score < 1000) return { title: 'Chuyên gia', min: 600, max: 1000 };
+    return { title: 'Bậc thầy', min: 1000, max: 2000 };
+  };
+
+  const score = profile?.trustScore ?? 0;
+  const levelInfo = getUserLevelInfo(score);
+  const progressPercent = Math.min(100, Math.max(0, ((score - levelInfo.min) / (levelInfo.max - levelInfo.min)) * 100));
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24">
       {/* Header */}
@@ -42,7 +54,7 @@ export default function Tasks() {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100">
           <Star size={14} className="text-amber-500" fill="currentColor" />
-          <span className="text-xs font-black text-amber-600">{profile?.trustScore || 850}</span>
+          <span className="text-xs font-black text-amber-600">{score}</span>
         </div>
       </div>
 
@@ -57,18 +69,18 @@ export default function Tasks() {
               </div>
               <div>
                 <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Cấp độ hiện tại</p>
-                <h2 className="text-lg font-black tracking-tight">Người mới năng động</h2>
+                <h2 className="text-lg font-black tracking-tight">{levelInfo.title}</h2>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold">
-                <span className="text-white/60">Tiến trình cấp độ</span>
-                <span>75%</span>
+                <span className="text-white/60">Tiến trình cấp độ ({score}/{levelInfo.max})</span>
+                <span>{Math.round(progressPercent)}%</span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: '75%' }}
+                  animate={{ width: `${progressPercent}%` }}
                   className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
                 />
               </div>

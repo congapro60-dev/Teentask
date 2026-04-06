@@ -143,7 +143,7 @@ export default function Home() {
             className="bg-amber-50 p-3 rounded-2xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
           >
             <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1">Điểm</p>
-            <p className="text-xl font-black text-amber-600">{profile?.trustScore || 0}</p>
+            <p className="text-xl font-black text-amber-600">{profile?.trustScore ?? 0}</p>
           </div>
         </div>
       </section>

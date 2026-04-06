@@ -128,7 +128,7 @@ export default function StudentProfile() {
             <div className="flex items-center gap-4 mt-4">
               <div className="flex items-center gap-1 text-sm font-bold text-gray-700">
                 <Star size={16} className="text-amber-400 fill-amber-400" />
-                {studentInfo.trustScore || '5.0'}
+                {studentInfo.trustScore ?? 0}
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <MapPin size={16} />
@@ -141,7 +141,7 @@ export default function StudentProfile() {
                 <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Tín nhiệm</p>
                 <div className="flex items-center justify-center gap-1">
                   <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                  <p className="text-lg font-black text-gray-900">{studentInfo.trustScore || '5.0'}</p>
+                  <p className="text-lg font-black text-gray-900">{studentInfo.trustScore ?? 0}</p>
                 </div>
               </div>
               <div className="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100">

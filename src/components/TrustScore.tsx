@@ -8,7 +8,7 @@ import { cn } from '../lib/utils';
 export default function TrustScore() {
   const navigate = useNavigate();
   const { profile } = useFirebase();
-  const score = profile?.trustScore || 850; // Default mock score if not set
+  const score = profile?.trustScore ?? 0; // Default score to 0
 
   const getScoreLevel = (s: number) => {
     if (s >= 900) return { label: 'Xuất sắc', color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100' };
