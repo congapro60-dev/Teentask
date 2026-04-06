@@ -1,7 +1,52 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, Component, ErrorInfo, ReactNode } from 'react';
 import { GraduationCap, ShieldCheck, Building2, ChevronRight, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+// Error Boundary Component
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-red-100">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShieldAlert className="w-8 h-8 text-red-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Đã có lỗi xảy ra</h1>
+            <p className="text-gray-600 mb-6">Ứng dụng gặp sự cố không mong muốn. Vui lòng tải lại trang hoặc thử lại sau.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-3 px-4 bg-[#4F46E5] text-white rounded-xl font-semibold hover:bg-[#4338CA] transition-colors"
+            >
+              Tải lại trang
+            </button>
+            {process.env.NODE_ENV === 'development' && (
+              <pre className="mt-6 p-4 bg-gray-50 rounded-lg text-left text-xs text-red-500 overflow-auto max-h-40">
+                {this.state.error?.toString()}
+              </pre>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 import Layout from './components/Layout';
 import Home from './components/Home';
 import Jobs from './components/Jobs';
@@ -61,7 +106,10 @@ function AppContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="w-12 h-12 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-500 font-medium animate-pulse">Đang tải TeenTask...</p>
+        </div>
       </div>
     );
   }
@@ -251,10 +299,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <Router>
-      <FirebaseProvider>
-        <AppContent />
-      </FirebaseProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <FirebaseProvider>
+          <AppContent />
+        </FirebaseProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }

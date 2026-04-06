@@ -16,10 +16,21 @@ const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
 const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+let firebaseConfig: any = {};
+
+if (fs.existsSync(configPath)) {
+  try {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    console.log("Loaded Firebase config from firebase-applet-config.json");
+  } catch (e) {
+    console.error("Error parsing firebase-applet-config.json:", e);
+  }
+} else {
+  console.warn("firebase-applet-config.json not found. Server will rely on environment variables.");
+}
 
 let adminConfig: any = {
-  projectId: firebaseConfig.projectId
+  projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId
 };
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -30,14 +41,16 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   } catch (e) {
     console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT:", e);
   }
+} else if (adminConfig.projectId) {
+  console.log("Firebase Admin initialized with Project ID (limited functionality).");
 } else {
-  console.warn("FIREBASE_SERVICE_ACCOUNT not found. Firestore admin access may be denied.");
+  console.warn("FIREBASE_SERVICE_ACCOUNT and FIREBASE_PROJECT_ID not found. Firestore admin access may be denied.");
 }
 
-initializeApp(adminConfig);
+const adminApp = initializeApp(adminConfig);
 
-const db = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(firebaseConfig.firestoreDatabaseId)
+const db = (process.env.FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId)
+  ? getFirestore(process.env.FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId)
   : getFirestore();
 
 // Email Transporter
@@ -278,21 +291,48 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev";
+  
+  if (isDev) {
+    console.log("Running in DEVELOPMENT mode with Vite middleware");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    
+    // Fallback for SPA in dev mode
+    app.get("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    console.log("Running in PRODUCTION mode");
+    const distPath = path.resolve(__dirname, "dist");
+    
+    // Serve static files from dist
+    app.use(express.static(distPath, { index: false }));
+    
+    // SPA Fallback: Serve dist/index.html for all other routes
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      const indexPath = path.resolve(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        console.error("Production build not found! dist/index.html is missing.");
+        res.status(500).send("Ứng dụng chưa được build. Vui lòng chạy 'npm run build' trên Render.");
+      }
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
