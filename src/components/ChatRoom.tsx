@@ -1,22 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db, auth } from './FirebaseProvider';
+import { db, auth, useFirebase } from './FirebaseProvider';
 import { Chat, Message } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, ChevronLeft, MoreVertical, Phone, Video, Image, Paperclip, Smile, Sparkles, Bot } from 'lucide-react';
+import { Send, ChevronLeft, MoreVertical, Phone, Video, Image, Paperclip, Smile, Sparkles, Bot, Zap, HelpCircle, BookOpen, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { TEENTASK_BOT_ID, TEENTASK_BOT_SYSTEM_INSTRUCTION, getGeminiModel } from '../lib/gemini';
 
 export default function ChatRoom() {
   const { chatId } = useParams();
+  const { profile } = useFirebase();
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const BOT_SUGGESTIONS = [
+    { icon: HelpCircle, text: "TeenTask là gì?", prompt: "TeenTask là gì và hoạt động như thế nào?" },
+    { icon: UserPlus, text: "Xác thực phụ huynh", prompt: "Làm thế nào để xác thực phụ huynh cho tài khoản học sinh?" },
+    { icon: BookOpen, text: "Cách tìm việc làm", prompt: "Hướng dẫn tôi cách tìm và ứng tuyển việc làm trên app." },
+    { icon: Zap, text: "Mẹo viết CV", prompt: "Cho tôi một vài mẹo để viết hồ sơ năng lực ấn tượng." },
+  ];
 
   useEffect(() => {
     if (!chatId || !auth.currentUser) return;
@@ -105,11 +114,11 @@ export default function ChatRoom() {
     return () => unsubscribe();
   }, [chatId]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !chatId || !auth.currentUser) return;
+  const handleSendMessage = async (e: React.FormEvent, customText?: string) => {
+    if (e) e.preventDefault();
+    const textToUse = customText || newMessage.trim();
+    if (!textToUse || !chatId || !auth.currentUser) return;
 
-    const messageText = newMessage.trim();
     setNewMessage('');
 
     try {
@@ -122,34 +131,38 @@ export default function ChatRoom() {
       await addDoc(collection(db, 'chats', actualChatId, 'messages'), {
         chatId: actualChatId,
         senderId: auth.currentUser.uid,
-        text: messageText,
+        text: textToUse,
         createdAt: Date.now()
       });
 
       // Update last message in chat document
       await updateDoc(doc(db, 'chats', actualChatId), {
-        lastMessage: messageText,
+        lastMessage: textToUse,
         lastMessageAt: Date.now()
       });
 
       // Handle Bot Response
       if (isBotChat) {
+        setIsTyping(true);
         setTimeout(async () => {
           try {
-            const ai = getGeminiModel();
-            const chatSession = ai.models.generateContent({
+            const client = getGeminiModel("gemini-3-flash-preview", profile?.geminiApiKey);
+            
+            // Construct history for Gemini
+            const history = messages.slice(-10).map(m => ({
+              role: m.senderId === auth.currentUser?.uid ? 'user' : 'model',
+              parts: [{ text: m.text }]
+            }));
+
+            const chatSession = client.chats.create({
               model: "gemini-3-flash-preview",
-              contents: [
-                { role: 'user', parts: [{ text: `System Instruction: ${TEENTASK_BOT_SYSTEM_INSTRUCTION}` }] },
-                ...messages.slice(-10).map(m => ({
-                  role: m.senderId === auth.currentUser?.uid ? 'user' : 'model',
-                  parts: [{ text: m.text }]
-                })),
-                { role: 'user', parts: [{ text: messageText }] }
-              ]
+              config: {
+                systemInstruction: TEENTASK_BOT_SYSTEM_INSTRUCTION
+              },
+              history: history
             });
 
-            const result = await chatSession;
+            const result = await chatSession.sendMessage({ message: textToUse });
             const botResponse = result.text || "Xin lỗi, tôi không thể trả lời lúc này.";
 
             await addDoc(collection(db, 'chats', actualChatId, 'messages'), {
@@ -165,8 +178,17 @@ export default function ChatRoom() {
             });
           } catch (aiError) {
             console.error("Bot AI Error:", aiError);
+            // Add a fallback message if AI fails
+            await addDoc(collection(db, 'chats', actualChatId, 'messages'), {
+              chatId: actualChatId,
+              senderId: TEENTASK_BOT_ID,
+              text: "Xin lỗi, tôi đang gặp chút sự cố kỹ thuật. Bạn vui lòng thử lại sau nhé!",
+              createdAt: Date.now()
+            });
+          } finally {
+            setIsTyping(false);
           }
-        }, 500);
+        }, 1000);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -247,6 +269,42 @@ export default function ChatRoom() {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth no-scrollbar">
+        {messages.length === 0 && isBot && (
+          <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              className="w-24 h-24 bg-primary/10 rounded-[40px] flex items-center justify-center border-4 border-white shadow-xl"
+            >
+              <Bot size={48} className="text-primary" strokeWidth={2.5} />
+            </motion.div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-gray-900 tracking-tight">Chào mừng bạn!</h2>
+              <p className="text-sm text-gray-500 font-bold max-w-xs mx-auto leading-relaxed">
+                Tôi là TeenTask Bot, trợ lý ảo của bạn. Hãy hỏi tôi bất cứ điều gì về ứng dụng!
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md pt-4">
+              {BOT_SUGGESTIONS.map((s, i) => (
+                <motion.button
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  onClick={() => handleSendMessage(null as any, s.prompt)}
+                  className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-primary/30 hover:bg-primary/5 transition-all text-left group"
+                >
+                  <div className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-primary transition-colors">
+                    <s.icon size={16} />
+                  </div>
+                  <span className="text-xs font-black text-gray-700 group-hover:text-primary transition-colors">{s.text}</span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {chat?.relatedTo && (
           <div className="flex justify-center mb-8">
             <motion.div 
@@ -296,6 +354,19 @@ export default function ChatRoom() {
               </div>
             );
           })}
+          {isTyping && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <div className="bg-white p-4 rounded-[24px] rounded-tl-none border border-gray-100 shadow-sm flex gap-1">
+                <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1.5 h-1.5 bg-primary rounded-full" />
+                <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-1.5 h-1.5 bg-primary rounded-full" />
+                <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-1.5 h-1.5 bg-primary rounded-full" />
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
         <div ref={scrollRef} />
       </div>

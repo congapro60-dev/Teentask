@@ -221,15 +221,15 @@ export default function JobDetail({
             <div className="flex-1 overflow-y-auto p-8 pt-4 no-scrollbar">
               <div className="space-y-8">
                 {/* Responsibilities */}
-                <section>
-                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <section className="space-y-4">
+                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
                     <div className="w-1.5 h-6 bg-[#4F46E5] rounded-full"></div>
                     Trách nhiệm công việc
                   </h3>
                   <ul className="space-y-3">
                     {job.responsibilities?.map((item: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600 leading-relaxed">
-                        <CheckCircle2 size={18} className="text-[#4F46E5] shrink-0 mt-0.5" />
+                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600 leading-relaxed group">
+                        <div className="mt-2 w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 group-hover:scale-125 transition-transform" />
                         {item}
                       </li>
                     ))}
@@ -237,15 +237,15 @@ export default function JobDetail({
                 </section>
 
                 {/* Qualifications */}
-                <section>
-                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <div className="w-1.5 h-6 bg-[#4F46E5] rounded-full"></div>
+                <section className="space-y-4">
+                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                    <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
                     Yêu cầu ứng viên
                   </h3>
                   <ul className="space-y-3">
                     {job.qualifications?.map((item: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600 leading-relaxed">
-                        <div className="w-1.5 h-1.5 bg-[#4F46E5] rounded-full mt-2 shrink-0"></div>
+                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600 leading-relaxed group">
+                        <div className="mt-2 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 group-hover:scale-125 transition-transform" />
                         {item}
                       </li>
                     ))}
@@ -253,16 +253,16 @@ export default function JobDetail({
                 </section>
 
                 {/* Benefits */}
-                <section>
-                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <div className="w-1.5 h-6 bg-[#4F46E5] rounded-full"></div>
+                <section className="space-y-4">
+                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                    <div className="w-1.5 h-6 bg-green-500 rounded-full"></div>
                     Quyền lợi & Đãi ngộ
                   </h3>
-                  <div className="bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100/50">
+                  <div className="bg-green-50/30 p-6 rounded-3xl border border-green-100/50">
                     <ul className="space-y-3">
                       {job.benefits?.map((item: string, i: number) => (
-                        <li key={i} className="flex items-start gap-3 text-sm text-gray-700 leading-relaxed">
-                          <ShieldCheck size={18} className="text-[#4F46E5] shrink-0 mt-0.5" />
+                        <li key={i} className="flex items-start gap-3 text-sm text-gray-700 leading-relaxed group">
+                          <div className="mt-2 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0 group-hover:scale-125 transition-transform" />
                           {item}
                         </li>
                       ))}

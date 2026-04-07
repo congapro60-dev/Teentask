@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, UserCheck, UserX, Search, Filter, Clock, CheckCircle2, XCircle, AlertCircle, Eye, X, Briefcase, MessageSquare, Megaphone, Send, UserCog } from 'lucide-react';
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, addDoc, orderBy, limit, getDoc } from 'firebase/firestore';
+import { ShieldCheck, UserCheck, UserX, Search, Filter, Clock, CheckCircle2, XCircle, AlertCircle, Eye, X, Briefcase, MessageSquare, Megaphone, Send, UserCog, Zap } from 'lucide-react';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, addDoc, orderBy, limit, getDoc, setDoc } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
 import { Job, Advertisement } from '../types';
+import { cn } from '../lib/utils';
 
 export default function AdminDashboard() {
   const { profile, loading: firebaseLoading } = useFirebase();

@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { Home, Briefcase, GraduationCap, MessageSquare, User, Heart, ShieldCheck, Bell, Search, Menu, X, LogOut, Settings, HelpCircle, Star, Info, PieChart, Calendar, Check } from 'lucide-react';
+import { Home, Briefcase, GraduationCap, MessageSquare, User, Heart, ShieldCheck, Bell, Search, Menu, X, LogOut, Settings, HelpCircle, Star, Info, PieChart, Calendar, Check, Rocket } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -9,6 +9,7 @@ import { signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import SearchOverlay from './SearchOverlay';
 import Clock from './Clock';
+import OnboardingTutorial from './OnboardingTutorial';
 
 interface LayoutProps {
   children: ReactNode;
@@ -96,31 +97,31 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const mainNavItems = [
-    { icon: Home, label: 'Trang chủ', path: '/' },
-    { icon: MessageSquare, label: 'Tin nhắn', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : undefined },
-    { icon: Bell, label: 'Thông báo', path: '/notifications', badge: unreadNotifications > 0 ? unreadNotifications : undefined },
-    { icon: Info, label: 'Thông tin dự án', path: '/about' },
+    { id: 'nav-home', icon: Home, label: 'Trang chủ', path: '/' },
+    { id: 'nav-messages', icon: MessageSquare, label: 'Tin nhắn', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : undefined },
+    { id: 'nav-notifications', icon: Bell, label: 'Thông báo', path: '/notifications', badge: unreadNotifications > 0 ? unreadNotifications : undefined },
+    { id: 'nav-about', icon: Info, label: 'Thông tin dự án', path: '/about' },
   ];
 
   const roleSpecificItems = {
     admin: [
-      { icon: PieChart, label: 'Xem khảo sát', path: '/admin/surveys' },
-      { icon: ShieldCheck, label: 'Quản trị', path: '/admin' },
+      { id: 'nav-surveys', icon: PieChart, label: 'Xem khảo sát', path: '/admin/surveys' },
+      { id: 'nav-admin', icon: ShieldCheck, label: 'Quản trị', path: '/admin' },
     ],
     boss: [
-      { icon: Settings, label: 'Quản lý', path: '/boss-manage' },
-      { icon: PieChart, label: 'Xem khảo sát', path: '/admin/surveys' },
-      { icon: ShieldCheck, label: 'Quản trị', path: '/admin' },
+      { id: 'nav-boss-manage', icon: Settings, label: 'Quản lý', path: '/boss-manage' },
+      { id: 'nav-surveys', icon: PieChart, label: 'Xem khảo sát', path: '/admin/surveys' },
+      { id: 'nav-admin', icon: ShieldCheck, label: 'Quản trị', path: '/admin' },
     ],
     business: [
-      { icon: Briefcase, label: 'QL Việc làm', path: '/jobs-manage' },
-      { icon: GraduationCap, label: 'QL Kiến tập', path: '/shadowing-manage' },
+      { id: 'nav-jobs-manage', icon: Briefcase, label: 'QL Việc làm', path: '/jobs-manage' },
+      { id: 'nav-shadowing-manage', icon: GraduationCap, label: 'QL Kiến tập', path: '/shadowing-manage' },
     ],
     parent: [
-      { icon: ShieldCheck, label: 'Giám sát', path: '/monitoring' },
+      { id: 'nav-monitoring', icon: ShieldCheck, label: 'Giám sát', path: '/monitoring' },
     ],
     student: [
-      { icon: Heart, label: 'Đã lưu', path: '/saved' },
+      { id: 'nav-saved', icon: Heart, label: 'Đã lưu', path: '/saved' },
     ]
   };
 
@@ -254,6 +255,7 @@ export default function Layout({ children }: LayoutProps) {
               </button>
 
               <button 
+                id="user-profile-btn"
                 onClick={() => navigate('/profile')}
                 className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-transparent hover:border-gray-300 transition-all relative"
               >
@@ -279,6 +281,7 @@ export default function Layout({ children }: LayoutProps) {
           {mainNavItems.map((item) => (
             <NavLink
               key={item.path}
+              id={item.id}
               to={item.path}
               className={({ isActive }) =>
                 cn(
@@ -359,22 +362,103 @@ export default function Layout({ children }: LayoutProps) {
           </main>
 
           {/* Right Sidebar - Desktop only */}
-          <aside className="hidden xl:block w-[280px] xl:w-[320px] shrink-0 sticky top-32 h-fit">
+          <aside className="hidden xl:block w-[280px] xl:w-[320px] shrink-0 sticky top-32 h-fit space-y-6">
+            {/* Sponsored Section */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
-              <h3 className="font-bold text-gray-500 mb-4 px-2 uppercase text-xs tracking-wider">Được tài trợ</h3>
+              <h3 className="font-bold text-gray-500 mb-4 px-2 uppercase text-[10px] tracking-widest">Được tài trợ</h3>
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer">
-                  <img src="https://picsum.photos/seed/edu/100/100" className="w-24 h-24 rounded-xl object-cover" referrerPolicy="no-referrer" />
+                <div className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer group transition-all">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                    <img src="https://picsum.photos/seed/edu/200/200" className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                  </div>
                   <div>
-                    <h4 className="text-sm font-bold">Khóa học TeenTask Pro</h4>
-                    <p className="text-xs text-gray-500">teentask.edu.vn</p>
+                    <h4 className="text-sm font-black text-gray-900 leading-tight">Khóa học TeenTask Pro</h4>
+                    <p className="text-[10px] text-gray-400 font-bold mt-1">teentask.edu.vn</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer group transition-all">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                    <img src="https://picsum.photos/seed/milk/200/200" className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900 leading-tight">Ưu đãi trà sữa 50%</h4>
+                    <p className="text-[10px] text-gray-400 font-bold mt-1">gongcha.com.vn</p>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Trending / Horoscope Widget */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-widest">Xu hướng Gen Z</h3>
+                <Star size={16} className="text-amber-400" fill="currentColor" />
+              </div>
+              <div className="space-y-4">
+                {[
+                  { tag: '#HuongNghiep', count: '12.5k bài viết', icon: Rocket },
+                  { tag: '#KỹNăngMềm', count: '8.2k bài viết', icon: GraduationCap },
+                  { tag: '#TeenTasker', count: '15.1k bài viết', icon: Star },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 group cursor-pointer">
+                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                      <item.icon size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-gray-900 group-hover:text-indigo-600 transition-colors">{item.tag}</p>
+                      <p className="text-[10px] text-gray-400 font-bold">{item.count}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button className="w-full mt-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all">
+                Xem thêm xu hướng
+              </button>
+            </div>
+
+            {/* Calendar Widget */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-widest">Lịch sự kiện</h3>
+                <Calendar size={16} className="text-indigo-600" />
+              </div>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shrink-0">
+                    <span className="text-[10px] font-black uppercase">Th4</span>
+                    <span className="text-lg font-black leading-none">15</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900">Workshop Design</h4>
+                    <p className="text-[10px] text-gray-400 font-bold">Online • 19:00</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 bg-amber-500 rounded-2xl flex flex-col items-center justify-center text-white shrink-0">
+                    <span className="text-[10px] font-black uppercase">Th4</span>
+                    <span className="text-lg font-black leading-none">20</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900">Job Shadowing Day</h4>
+                    <p className="text-[10px] text-gray-400 font-bold">FPT Software • 08:00</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Links */}
+            <div className="px-4 flex flex-wrap gap-x-4 gap-y-2">
+              {['Quyền riêng tư', 'Điều khoản', 'Quảng cáo', 'Lựa chọn quảng cáo', 'Cookies', 'Xem thêm', 'TeenTask © 2026'].map((link, i) => (
+                <span key={i} className="text-[10px] font-bold text-gray-400 hover:underline cursor-pointer">
+                  {link}
+                </span>
+              ))}
+            </div>
           </aside>
         </div>
       </div>
+
+      <OnboardingTutorial />
 
       {/* Side Menu Overlay */}
       <AnimatePresence>

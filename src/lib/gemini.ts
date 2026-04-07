@@ -2,15 +2,30 @@ import { GoogleGenAI } from "@google/genai";
 
 const FALLBACK_API_KEY = "AIzaSyBsJyvMYihJJKfbwHn4LakbAb4IUKEagck";
 
-export const getGeminiApiKey = () => {
-  // Priority: process.env.GEMINI_API_KEY -> Fallback Key
-  return process.env.GEMINI_API_KEY || FALLBACK_API_KEY;
+export const getGeminiApiKey = (userApiKey?: string) => {
+  // Priority: userApiKey -> process.env.GEMINI_API_KEY -> Fallback Key
+  return userApiKey || process.env.GEMINI_API_KEY || FALLBACK_API_KEY;
 };
 
-export const getGeminiModel = (modelName: string = "gemini-3-flash-preview") => {
-  const apiKey = getGeminiApiKey();
-  const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
+
+export const getGeminiModel = (modelName: string = "gemini-3-flash-preview", userApiKey?: string) => {
+  if (userApiKey) {
+    return new GoogleGenAI({ apiKey: userApiKey });
+  }
   return ai;
+};
+
+export const generateTeenTaskResponse = async (prompt: string, userApiKey?: string) => {
+  const client = getGeminiModel("gemini-3-flash-preview", userApiKey);
+  const response = await client.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      systemInstruction: TEENTASK_BOT_SYSTEM_INSTRUCTION
+    }
+  });
+  return response.text;
 };
 
 export const TEENTASK_BOT_ID = "teentask-bot";

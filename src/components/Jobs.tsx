@@ -1,4 +1,4 @@
-import { Search, Filter, MapPin, Clock, DollarSign, Building2, Sparkles, Briefcase, MessageSquare, Heart, Bell, X, Zap, Check } from 'lucide-react';
+import { Search, Filter, MapPin, Clock, DollarSign, Building2, Sparkles, Briefcase, MessageSquare, Heart, Bell, X, Zap, Check, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -514,10 +514,12 @@ export default function Jobs() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               onClick={() => handleOpenDetail(job)}
-              className={`p-6 bg-white border border-gray-100 rounded-[32px] shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all group cursor-pointer ${
+              className={`p-6 bg-white border border-gray-100 rounded-[32px] shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all group cursor-pointer relative overflow-hidden ${
                 job.jobStatus !== 'Active' ? 'opacity-75' : ''
               }`}
             >
+              <div className="absolute top-0 left-0 w-1 h-full bg-transparent group-hover:bg-[#4F46E5] transition-all" />
+              
               <div className={`flex justify-between items-start mb-6 ${job.jobStatus !== 'Active' ? 'grayscale' : ''}`}>
                 <div className="flex gap-4">
                   <div 
@@ -530,14 +532,14 @@ export default function Jobs() {
                     <img src={job.logo} alt={job.company} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-base group-hover:text-[#4F46E5] transition-colors">{job.title}</h3>
-                    <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-base group-hover:text-[#4F46E5] transition-colors leading-tight">{job.title}</h3>
+                    <div className="flex items-center gap-2 mt-1">
                       <p 
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/company/${job.businessId}`);
                         }}
-                        className="text-sm text-gray-400 font-bold uppercase tracking-wider cursor-pointer hover:text-[#4F46E5] transition-colors"
+                        className="text-[10px] text-gray-400 font-black uppercase tracking-widest cursor-pointer hover:text-[#4F46E5] transition-colors"
                       >
                         {job.company}
                       </p>
@@ -553,84 +555,46 @@ export default function Jobs() {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  {job.hot && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 rounded-full border border-red-100">
-                      <Sparkles size={10} className="text-red-500" />
-                      <span className="text-[9px] font-black text-red-500 uppercase">Hot</span>
-                    </div>
+                <button
+                  onClick={(e) => handleToggleSave(e, job.id)}
+                  className={`p-2.5 rounded-full transition-all border shadow-sm ${
+                    profile?.savedJobs?.includes(job.id)
+                    ? 'bg-red-50 text-red-500 border-red-100 scale-110'
+                    : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 hover:scale-110'
+                  }`}
+                >
+                  <Heart size={18} fill={profile?.savedJobs?.includes(job.id) ? "currentColor" : "none"} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500 bg-gray-50/50 p-2 rounded-xl border border-gray-50">
+                  <MapPin size={14} className="text-gray-400" />
+                  <span className="truncate">{job.location}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] font-bold text-[#4F46E5] bg-indigo-50/50 p-2 rounded-xl border border-indigo-50">
+                  <DollarSign size={14} />
+                  <span className="truncate">{job.salary}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-1.5">
+                  {job.tags.slice(0, 2).map((tag) => (
+                    <span key={tag} className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+                      #{tag.toUpperCase()}
+                    </span>
+                  ))}
+                  {job.tags.length > 2 && (
+                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+                      +{job.tags.length - 2}
+                    </span>
                   )}
-                  <button
-                    onClick={(e) => handleToggleSave(e, job.id)}
-                    className={`p-2 rounded-full transition-colors border shadow-sm ${
-                      profile?.savedJobs?.includes(job.id)
-                      ? 'bg-red-50 text-red-500 border-red-100'
-                      : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Heart size={16} fill={profile?.savedJobs?.includes(job.id) ? "currentColor" : "none"} />
-                  </button>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
-                  <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
-                    <MapPin size={14} className="text-gray-400" />
-                  </div>
-                  {job.location}
+                <div className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Xem chi tiết
+                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                 </div>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
-                  <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
-                    <Clock size={14} className="text-gray-400" />
-                  </div>
-                  Hạn: {job.deadlineDisplay}
-                </div>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-[#4F46E5]">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
-                    <DollarSign size={14} className="text-[#4F46E5]" />
-                  </div>
-                  {job.salary}
-                </div>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
-                  <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
-                    <Briefcase size={14} className="text-gray-400" />
-                  </div>
-                  {job.type}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-8">
-                {job.tags.map((tag) => (
-                  <span key={tag} className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-                    #{tag.toUpperCase()}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleApply(job);
-                  }}
-                  className="flex-1 py-4 bg-[#4F46E5] text-white rounded-[20px] text-sm font-black shadow-lg shadow-indigo-100 hover:bg-[#4338CA] transition-all"
-                >
-                  ỨNG TUYỂN NGAY
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleChat(job);
-                  }}
-                  className="w-14 h-14 flex items-center justify-center bg-indigo-50 text-[#4F46E5] rounded-[20px] hover:bg-indigo-100 transition-all"
-                >
-                  <MessageSquare size={20} />
-                </motion.button>
               </div>
             </motion.div>
           ))

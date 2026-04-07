@@ -62,6 +62,8 @@ export interface UserProfile {
   cvId?: string;
   lastCheckIn?: string;
   claimedTasks?: string[];
+  tutorialCompleted?: { [role: string]: boolean };
+  geminiApiKey?: string;
 }
 
 export interface CV {
