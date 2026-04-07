@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, Award, MapPin, ExternalLink, Download, ShieldCheck, Clock, XCircle, ChevronRight, Star, X, Bell, AlertTriangle, Check, Plus, Building2, UserPlus, UserCheck, Users, Heart, Briefcase as BriefcaseIcon, User, LogOut, Edit2, Trash2, Calendar, Phone, Mail, Globe, GraduationCap, Languages } from 'lucide-react';
+import { Settings, Shield, Award, MapPin, ExternalLink, Download, ShieldCheck, Clock, XCircle, ChevronRight, Star, X, Bell, AlertTriangle, Check, Plus, Building2, UserPlus, UserCheck, Users, Heart, Briefcase as BriefcaseIcon, User, LogOut, Edit2, Trash2, Calendar, Phone, Mail, Globe, GraduationCap, Languages, FileText, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '../lib/utils';
 import { useFirebase } from './FirebaseProvider';
 import { collection, query, where, getDocs, onSnapshot, addDoc, doc, getDoc, updateDoc, deleteDoc, orderBy, setDoc } from 'firebase/firestore';
 import { db, auth } from './FirebaseProvider';
@@ -634,6 +635,44 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* Left Column: Social & Identity */}
           <div className="space-y-6">
+            {/* CV Management */}
+            {profile?.role === 'student' && (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-[#1877F2] to-[#4F46E5] rounded-[32px] p-6 text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText className="text-amber-400" size={24} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Hồ sơ chuyên nghiệp</span>
+                    </div>
+                    <h3 className="text-xl font-black mb-2 tracking-tight">Trình tạo CV TeenTask</h3>
+                    <p className="text-white/80 text-xs mb-6 max-w-[200px]">Tạo và quản lý CV chuyên nghiệp để ứng tuyển việc làm & kiến tập.</p>
+                    <button 
+                      onClick={() => navigate('/cv-builder')}
+                      className="bg-white text-[#1877F2] px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-transform active:scale-95 flex items-center gap-2"
+                    >
+                      <Edit2 size={14} />
+                      {profile?.cvId ? 'Chỉnh sửa CV' : 'Tạo CV mới'}
+                    </button>
+                  </div>
+                  <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform"></div>
+                  <div className="absolute bottom-[-10%] left-[-5%] w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+                </div>
+
+                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 flex items-center justify-between group cursor-pointer hover:border-primary/30 transition-all" onClick={() => navigate('/schedule')}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                      <CalendarDays size={24} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">Lịch trình kiến tập</h4>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Xem các buổi đã đăng ký</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-slate-300 group-hover:text-primary transition-all" />
+                </div>
+              </div>
+            )}
+
             {/* Friend Requests */}
             {friendRequests.length > 0 && (
               <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
@@ -986,7 +1025,17 @@ export default function Profile() {
             {verificationUI && (
               <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Trạng thái hồ sơ</h4>
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                <div 
+                  onClick={() => {
+                    if (profile?.verificationStatus !== 'verified') {
+                      navigate('/verify');
+                    }
+                  }}
+                  className={cn(
+                    "bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-4 transition-all",
+                    profile?.verificationStatus !== 'verified' && "cursor-pointer hover:bg-gray-100 hover:border-indigo-200 active:scale-[0.98]"
+                  )}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full ${verificationUI.bgColor} flex items-center justify-center ${verificationUI.color}`}>
@@ -1001,10 +1050,22 @@ export default function Profile() {
                         </p>
                       </div>
                     </div>
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border ${verificationUI.badgeColor}`}>
-                      {verificationUI.statusText}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border ${verificationUI.badgeColor}`}>
+                        {verificationUI.statusText}
+                      </span>
+                      {profile?.verificationStatus !== 'verified' && (
+                        <ChevronRight size={16} className="text-gray-400" />
+                      )}
+                    </div>
                   </div>
+
+                  {profile?.verificationStatus !== 'verified' && (
+                    <div className="pt-2 flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+                      <Edit2 size={12} />
+                      Nhấn để xác minh lại
+                    </div>
+                  )}
 
                   {profile?.verificationStatus === 'pending' && profile?.role === 'student' && (
                     <div className="pt-4 border-t border-gray-200 space-y-2">

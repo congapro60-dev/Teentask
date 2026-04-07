@@ -176,6 +176,43 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "userId", "type", "amount", "status", "description", "createdAt"]
+    },
+    "CV": {
+      "title": "Curriculum Vitae",
+      "description": "Student CV for job applications.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "summary": { "type": "string" },
+        "education": { "type": "array" },
+        "experience": { "type": "array" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "projects": { "type": "array" },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "lastUpdated": { "type": "number" }
+      },
+      "required": ["id", "userId", "fullName", "email", "lastUpdated"]
+    },
+    "ShadowingBooking": {
+      "title": "Shadowing Booking",
+      "description": "Student booking for a shadowing event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "eventTitle": { "type": "string" },
+        "eventDate": { "type": "string" },
+        "company": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "eventId", "eventTitle", "eventDate", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -218,6 +255,14 @@
     "transactions/{transactionId}": {
       "schema": "Transaction",
       "description": "Wallet transactions."
+    },
+    "cvs/{cvId}": {
+      "schema": "CV",
+      "description": "Student CVs."
+    },
+    "shadowing_bookings/{bookingId}": {
+      "schema": "ShadowingBooking",
+      "description": "Shadowing event bookings."
     }
   }
 }

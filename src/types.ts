@@ -59,6 +59,52 @@ export interface UserProfile {
   friends?: string[];
   following?: string[];
   followers?: string[];
+  cvId?: string;
+}
+
+export interface CV {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  summary: string;
+  education: {
+    school: string;
+    degree: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+  }[];
+  experience: {
+    company: string;
+    position: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+  }[];
+  skills: string[];
+  projects: {
+    title: string;
+    description: string;
+    link?: string;
+  }[];
+  languages: string[];
+  photoURL?: string;
+  lastUpdated: number;
+}
+
+export interface ShadowingBooking {
+  id: string;
+  userId: string;
+  eventId: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime?: string;
+  company: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: number;
 }
 
 export interface FriendRequest {

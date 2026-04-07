@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, collection, addDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { UserProfile } from '../types';
+import { UserProfile, CV } from '../types';
 
 export { auth, db };
 
@@ -78,6 +78,10 @@ interface FirebaseContextType {
   submitNameChangeRequest: (newName: string, reason: string, proofUrl: string) => Promise<void>;
   toggleFollowUser: (targetUserId: string) => Promise<void>;
   unfriendUser: (targetUserId: string) => Promise<void>;
+  saveCV: (cvData: Partial<CV>) => Promise<string>;
+  getCV: (cvId: string) => Promise<CV | null>;
+  bookShadowing: (event: any) => Promise<void>;
+  getBookings: () => Promise<any[]>;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
@@ -477,6 +481,86 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const saveCV = async (cvData: Partial<CV>) => {
+    if (!user) throw new Error("User not authenticated");
+    const cvId = profile?.cvId || user.uid; // Use UID as CV ID for simplicity or a separate ID
+    const cvRef = doc(db, 'cvs', cvId);
+    
+    const fullCVData = {
+      ...cvData,
+      id: cvId,
+      userId: user.uid,
+      lastUpdated: Date.now()
+    };
+
+    try {
+      await setDoc(cvRef, cleanData(fullCVData), { merge: true });
+      if (!profile?.cvId) {
+        await updateProfile({ cvId });
+      }
+      return cvId;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `cvs/${cvId}`);
+      throw error;
+    }
+  };
+
+  const getCV = async (cvId: string) => {
+    const cvRef = doc(db, 'cvs', cvId);
+    try {
+      const snap = await getDoc(cvRef);
+      return snap.exists() ? (snap.data() as CV) : null;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `cvs/${cvId}`);
+      return null;
+    }
+  };
+
+  const bookShadowing = async (event: any) => {
+    if (!user || !profile) return;
+    const path = 'shadowing_bookings';
+    try {
+      const bookingId = `${user.uid}_${event.id}`;
+      await setDoc(doc(db, 'shadowing_bookings', bookingId), cleanData({
+        id: bookingId,
+        userId: user.uid,
+        eventId: event.id,
+        eventTitle: event.title,
+        eventDate: event.date,
+        company: event.company,
+        status: 'pending',
+        createdAt: Date.now()
+      }));
+      
+      // Send notification to user
+      await sendNotification(
+        user.uid,
+        'Đăng ký kiến tập thành công',
+        `Bạn đã đăng ký kiến tập tại ${event.company}. Vui lòng chờ xác nhận từ mentor.`,
+        'shadowing'
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const getBookings = async () => {
+    if (!user) return [];
+    const path = 'shadowing_bookings';
+    try {
+      // For simplicity, we'll use a basic fetch. In a real app, we'd use a query.
+      // But since we don't have indexes set up yet, we'll just fetch all or use onSnapshot.
+      // Let's use getDocs for now.
+      const { getDocs, query, where, collection } = await import('firebase/firestore');
+      const q = query(collection(db, 'shadowing_bookings'), where('userId', '==', user.uid));
+      const snap = await getDocs(q);
+      return snap.docs.map(doc => doc.data());
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, path);
+      return [];
+    }
+  };
+
   return (
     <FirebaseContext.Provider value={{ 
       user, profile, loading, login, logout, updateProfile, 
@@ -484,7 +568,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       addRelationship, acceptRelationship, rejectRelationship,
       submitRating, createChat, sendNotification,
       toggleSaveJob, toggleSaveShadowing, submitNameChangeRequest,
-      toggleFollowUser, unfriendUser
+      toggleFollowUser, unfriendUser, saveCV, getCV,
+      bookShadowing, getBookings
     }}>
       {children}
     </FirebaseContext.Provider>

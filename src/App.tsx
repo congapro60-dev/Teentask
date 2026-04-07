@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useState, Component, ErrorInfo, ReactNode } from 'react';
 import { GraduationCap, ShieldCheck, Building2, ChevronRight, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -74,9 +74,12 @@ import Companies from './components/Companies';
 import Saved from './components/Saved';
 import Vip from './components/Vip';
 import Wallet from './components/Wallet';
+import CVBuilder from './components/CVBuilder';
+import CalendarView from './components/CalendarView';
 import { FirebaseProvider, useFirebase } from './components/FirebaseProvider';
 
 function AppContent() {
+  const navigate = useNavigate();
   const { user, profile, loading, login, updateProfile } = useFirebase();
   const [view, setView] = useState<'guest' | 'login'>('guest');
   const [selectedRole, setSelectedRole] = useState<'student' | 'parent' | 'business' | 'admin' | null>(null);
@@ -277,6 +280,9 @@ function AppContent() {
                 <Route path="/saved" element={<Saved />} />
                 <Route path="/vip" element={<Vip />} />
                 <Route path="/wallet" element={<Wallet />} />
+                <Route path="/cv-builder" element={<CVBuilder />} />
+                <Route path="/schedule" element={<CalendarView />} />
+                <Route path="/verify" element={<VerificationFlow onClose={() => navigate('/profile')} />} />
                 {userRole === 'business' ? (
                   <>
                     <Route path="/jobs-manage" element={<ManageJobs />} />

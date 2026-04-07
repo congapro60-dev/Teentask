@@ -3,16 +3,27 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Bell, TrendingUp, Star, Zap, Clock, CheckCircle2, ChevronRight, ChevronLeft, Briefcase, GraduationCap, Building2, Users, Award, Rocket, Sparkles, MessageSquare, Heart } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
-import { db } from './FirebaseProvider';
+import { collection, query, where, onSnapshot, limit, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { db, auth } from './FirebaseProvider';
 import { cn } from '../lib/utils';
-import { Advertisement, Job } from '../types';
+import { Advertisement, Job, ShadowingEvent } from '../types';
+import JobDetail from './JobDetail';
+import ShadowingDetail from './ShadowingDetail';
+import { MOCK_JOBS, MOCK_SHADOWING } from '../mockData';
+import ParentVerificationModal from './ParentVerificationModal';
 
 export default function Home() {
   const { profile, toggleSaveJob, toggleSaveShadowing } = useFirebase();
   const navigate = useNavigate();
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [shadowingEvents, setShadowingEvents] = useState<ShadowingEvent[]>([]);
+  
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [isJobDetailOpen, setIsJobDetailOpen] = useState(false);
+  const [selectedShadowing, setSelectedShadowing] = useState<any>(null);
+  const [isShadowingDetailOpen, setIsShadowingDetailOpen] = useState(false);
+  const [isParentModalOpen, setIsParentModalOpen] = useState(false);
 
   useEffect(() => {
     const qAds = query(collection(db, 'advertisements'), where('status', '==', 'approved'), limit(10));
@@ -25,11 +36,115 @@ export default function Home() {
       setJobs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job)));
     }, (error) => console.error("Jobs listener error:", error));
 
+    const qShadowing = query(collection(db, 'shadowing_events'), limit(10));
+    const unsubShadowing = onSnapshot(qShadowing, (snapshot) => {
+      if (!snapshot.empty) {
+        setShadowingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShadowingEvent)));
+      }
+    }, (error) => console.error("Shadowing listener error:", error));
+
     return () => {
       unsubAds();
       unsubJobs();
+      unsubShadowing();
     };
   }, []);
+
+  const handleJobClick = (job: any) => {
+    // Ensure job has all fields needed for detail view
+    const fullJob = {
+      ...job,
+      company: job.companyName || job.company,
+      logo: job.businessLogo || job.logo,
+      jobStatus: job.status === 'active' ? 'Active' : (job.jobStatus || 'Active'),
+      responsibilities: job.responsibilities || [job.description],
+      qualifications: job.qualifications || [],
+      benefits: job.benefits || []
+    };
+    setSelectedJob(fullJob);
+    setIsJobDetailOpen(true);
+  };
+
+  const handleShadowingClick = (event: any) => {
+    setSelectedShadowing(event);
+    setIsShadowingDetailOpen(true);
+  };
+
+  const handleApplyJob = async (job: any) => {
+    if (!profile) {
+      navigate('/profile');
+      return;
+    }
+
+    if (profile.role === 'student' && profile.parentEmail && profile.parentalVerification !== 'verified') {
+      setIsParentModalOpen(true);
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'applications'), {
+        jobId: job.id,
+        businessId: job.businessId,
+        studentId: auth.currentUser?.uid,
+        studentName: profile.displayName,
+        studentPhoto: profile.photoURL,
+        parentEmail: profile.parentEmail || null,
+        parentStatus: profile.parentEmail ? 'pending' : 'approved',
+        finalStatus: 'pending',
+        createdAt: Date.now()
+      });
+      alert('Ứng tuyển thành công!');
+      setIsJobDetailOpen(false);
+    } catch (error) {
+      console.error("Error applying:", error);
+    }
+  };
+
+  const handleChat = async (item: any, type: 'job' | 'shadowing') => {
+    if (!auth.currentUser) {
+      navigate('/profile');
+      return;
+    }
+
+    const businessId = type === 'job' ? item.businessId : item.mentorId;
+    const participants = [auth.currentUser.uid, businessId].sort();
+    const chatId = participants.join('_');
+
+    try {
+      const chatRef = doc(db, 'chats', chatId);
+      const chatDoc = await getDoc(chatRef);
+
+      if (!chatDoc.exists()) {
+        await setDoc(chatRef, {
+          id: chatId,
+          participants,
+          participantDetails: {
+            [auth.currentUser.uid]: {
+              displayName: profile?.displayName || 'Học sinh',
+              photoURL: profile?.photoURL,
+              role: profile?.role || 'student'
+            },
+            [businessId]: {
+              displayName: type === 'job' ? item.businessName : item.mentorName,
+              photoURL: type === 'job' ? item.businessLogo : (item.mentorPhoto || `https://i.pravatar.cc/100?u=${item.mentorId}`),
+              role: 'business'
+            }
+          },
+          relatedTo: {
+            type,
+            id: item.id,
+            title: item.title
+          },
+          createdAt: Date.now(),
+          lastMessageAt: Date.now()
+        });
+      }
+
+      navigate(`/messages/${chatId}`);
+    } catch (error) {
+      console.error("Error starting chat:", error);
+    }
+  };
 
   const CarouselSection = ({ title, icon: Icon, items, renderItem, viewAllPath }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -222,17 +337,14 @@ export default function Home() {
       <CarouselSection 
         title="Việc làm mới nhất" 
         icon={Briefcase}
-        items={jobs.length >= 5 ? jobs : [
-          { id: 'j1', title: 'Phụ tá cửa hàng', companyName: 'Circle K', salary: '25k/h', location: 'Hà Nội' },
-          { id: 'j2', title: 'Gia sư Tiếng Anh', companyName: 'Gia sư Việt', salary: '150k/h', location: 'TP.HCM' },
-          { id: 'j3', title: 'Nhân viên phục vụ', companyName: 'The Coffee House', salary: '22k/h', location: 'Đà Nẵng' },
-          { id: 'j4', title: 'Cộng tác viên viết bài', companyName: 'Kênh 14', salary: '100k/bài', location: 'Online' },
-          { id: 'j5', title: 'Trợ giảng lớp vẽ', companyName: 'Art Center', salary: '50k/h', location: 'Hải Phòng' },
-        ]}
+        items={jobs.length > 0 ? jobs : MOCK_JOBS}
         renderItem={(job: any) => {
           const isSaved = profile?.savedJobs?.includes(job.id);
           return (
-            <div className="w-[240px] p-5 bg-white border border-gray-100 rounded-3xl shadow-sm hover:border-[#1877F2] transition-colors relative group">
+            <div 
+              onClick={() => handleJobClick(job)}
+              className="w-[240px] p-5 bg-white border border-gray-100 rounded-3xl shadow-sm hover:border-[#1877F2] transition-all relative group cursor-pointer hover:shadow-md"
+            >
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -246,12 +358,16 @@ export default function Home() {
                 <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
               </button>
               <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1877F2] mb-4">
-                <Briefcase size={24} />
+                {job.businessLogo || job.logo ? (
+                  <img src={job.businessLogo || job.logo} alt={job.businessName || job.company} className="w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
+                ) : (
+                  <Briefcase size={24} />
+                )}
               </div>
               <h4 className="font-bold text-gray-900 line-clamp-1 mb-1">{job.title}</h4>
-              <p className="text-xs text-gray-500 mb-4">{job.companyName}</p>
+              <p className="text-xs text-gray-500 mb-4">{job.businessName || job.company}</p>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-black text-[#1877F2]">{job.salary}</span>
+                <span className="text-sm font-black text-[#1877F2]">{typeof job.salary === 'number' ? `${job.salary.toLocaleString('vi-VN')}đ` : job.salary}</span>
                 <span className="text-[10px] font-bold text-gray-400">{job.location}</span>
               </div>
             </div>
@@ -264,17 +380,14 @@ export default function Home() {
       <CarouselSection 
         title="Kiến tập cao cấp" 
         icon={GraduationCap}
-        items={[
-          { id: 1, title: 'Một ngày làm CEO', mentor: 'Nguyễn Văn A', company: 'VinGroup', image: 'https://picsum.photos/seed/ceo/400/250' },
-          { id: 2, title: 'Trải nghiệm Marketing Agency', mentor: 'Trần Thị B', company: 'Ogivly', image: 'https://picsum.photos/seed/agency/400/250' },
-          { id: 3, title: 'Quan sát phòng mổ thực tế', mentor: 'Bác sĩ C', company: 'BV Việt Đức', image: 'https://picsum.photos/seed/hospital/400/250' },
-          { id: 4, title: 'Làm việc tại Studio phim', mentor: 'Đạo diễn D', company: 'Galaxy Studio', image: 'https://picsum.photos/seed/studio/400/250' },
-          { id: 5, title: 'Khám phá trung tâm dữ liệu', mentor: 'Kỹ sư E', company: 'Viettel IDC', image: 'https://picsum.photos/seed/datacenter/400/250' },
-        ]}
+        items={shadowingEvents.length > 0 ? shadowingEvents : MOCK_SHADOWING}
         renderItem={(item: any) => {
           const isSaved = profile?.savedShadowing?.includes(item.id.toString());
           return (
-            <div className="w-[280px] relative rounded-3xl overflow-hidden aspect-[4/3] shadow-md group">
+            <div 
+              onClick={() => handleShadowingClick(item)}
+              className="w-[280px] relative rounded-3xl overflow-hidden aspect-[4/3] shadow-md group cursor-pointer hover:shadow-xl transition-all"
+            >
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -287,14 +400,14 @@ export default function Home() {
               >
                 <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
               </button>
-              <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+              <img src={item.imageUrl || item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-5 flex flex-col justify-end">
                 <h4 className="text-white font-bold text-lg leading-tight mb-2">{item.title}</h4>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md overflow-hidden">
-                    <img src={`https://i.pravatar.cc/100?u=${item.mentor}`} alt={item.mentor} referrerPolicy="no-referrer" />
+                    <img src={item.mentorPhoto || `https://i.pravatar.cc/100?u=${item.mentorId || item.mentor}`} alt={item.mentorName || item.mentor} referrerPolicy="no-referrer" />
                   </div>
-                  <p className="text-white/80 text-[10px] font-medium">{item.mentor} @ {item.company}</p>
+                  <p className="text-white/80 text-[10px] font-medium">{item.mentorName || item.mentor} @ {item.companyName || item.company}</p>
                 </div>
               </div>
             </div>
@@ -336,7 +449,10 @@ export default function Home() {
             </div>
             <h3 className="text-2xl font-black mb-2 tracking-tight">Tạo CV chuyên nghiệp trong 5 phút</h3>
             <p className="text-white/80 text-xs mb-6 max-w-[200px]">Mẫu CV được thiết kế riêng cho học sinh, sinh viên.</p>
-            <button className="bg-white text-[#1877F2] px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-transform active:scale-95">
+            <button 
+              onClick={() => navigate('/cv-builder')}
+              className="bg-white text-[#1877F2] px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-transform active:scale-95"
+            >
               Tạo CV ngay
             </button>
           </div>
@@ -422,6 +538,32 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <JobDetail 
+        job={selectedJob}
+        isOpen={isJobDetailOpen}
+        onClose={() => setIsJobDetailOpen(false)}
+        onApply={handleApplyJob}
+        onChat={(job) => handleChat(job, 'job')}
+        isSaved={profile?.savedJobs?.includes(selectedJob?.id)}
+        onToggleSave={(e) => {
+          e.stopPropagation();
+          toggleSaveJob(selectedJob.id);
+        }}
+      />
+
+      <ShadowingDetail 
+        event={selectedShadowing}
+        isOpen={isShadowingDetailOpen}
+        onClose={() => setIsShadowingDetailOpen(false)}
+        onChat={(event) => handleChat(event, 'shadowing')}
+      />
+
+      <ParentVerificationModal 
+        isOpen={isParentModalOpen}
+        onClose={() => setIsParentModalOpen(false)}
+        onSuccess={() => setIsParentModalOpen(false)}
+      />
     </div>
   );
 }

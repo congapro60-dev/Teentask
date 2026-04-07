@@ -13,9 +13,14 @@ interface ShadowingDetailProps {
 
 export default function ShadowingDetail({ event, isOpen, onClose, onChat }: ShadowingDetailProps) {
   const [step, setStep] = useState<'detail' | 'booking' | 'success'>('detail');
-  const { profile, toggleSaveShadowing } = useFirebase();
+  const { profile, toggleSaveShadowing, bookShadowing } = useFirebase();
 
   if (!event) return null;
+
+  const handleConfirm = async () => {
+    await bookShadowing(event);
+    setStep('success');
+  };
 
   const isSaved = profile?.savedShadowing?.includes(event.id);
 
@@ -196,10 +201,25 @@ export default function ShadowingDetail({ event, isOpen, onClose, onChat }: Shad
                     Quay lại
                   </button>
                   <button
-                    onClick={() => setStep('success')}
+                    onClick={handleConfirm}
                     className="flex-[2] py-5 bg-primary text-white rounded-[28px] font-black text-sm uppercase tracking-widest hover:bg-primary/90 transition-all active:scale-95 shadow-2xl shadow-primary/30"
                   >
                     Xác nhận
+                  </button>
+                </div>
+              )}
+              {step === 'success' && (
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
+                    <ShieldCheck className="text-emerald-500" size={40} strokeWidth={2.5} />
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-2 tracking-tighter">Đăng ký thành công!</h3>
+                  <p className="text-slate-400 text-sm font-bold mb-8">Buổi kiến tập đã được thêm vào lịch trình của bạn.</p>
+                  <button
+                    onClick={onClose}
+                    className="w-full py-5 bg-white text-slate-950 rounded-[28px] font-black text-sm uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-2xl shadow-white/5"
+                  >
+                    Đóng
                   </button>
                 </div>
               )}

@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { Home, Briefcase, GraduationCap, MessageSquare, User, Heart, ShieldCheck, Bell, Search, Menu, X, LogOut, Settings, HelpCircle, Star, Info, PieChart } from 'lucide-react';
+import { Home, Briefcase, GraduationCap, MessageSquare, User, Heart, ShieldCheck, Bell, Search, Menu, X, LogOut, Settings, HelpCircle, Star, Info, PieChart, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -8,6 +8,7 @@ import { auth, db } from './FirebaseProvider';
 import { signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import SearchOverlay from './SearchOverlay';
+import Clock from './Clock';
 
 interface LayoutProps {
   children: ReactNode;
@@ -113,16 +114,19 @@ export default function Layout({ children }: LayoutProps) {
           </h1>
         </div>
 
-        <div className="flex-1 max-w-md mx-4">
+        <div className="flex-1 max-w-md mx-4 flex items-center gap-4">
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="w-full bg-[#F0F2F5] hover:bg-gray-200 rounded-full py-2 px-4 flex items-center gap-3 text-gray-500 transition-all text-sm group"
+            className="flex-1 bg-[#F0F2F5] hover:bg-gray-200 rounded-full py-2 px-4 flex items-center gap-3 text-gray-500 transition-all text-sm group"
           >
             <Search size={18} className="group-hover:scale-110 transition-transform" />
             <span className="hidden md:inline">Tìm kiếm trên TeenTask</span>
             <span className="md:inline hidden">...</span>
             <span className="md:hidden">Tìm kiếm...</span>
           </button>
+          <div className="hidden sm:block">
+            <Clock />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

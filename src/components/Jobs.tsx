@@ -41,6 +41,18 @@ export default function Jobs() {
   }, [profile?.skills]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get('id');
+    if (jobId && firestoreJobs.length > 0) {
+      const job = firestoreJobs.find(j => j.id === jobId) || MOCK_JOBS.find(j => j.id === jobId);
+      if (job) {
+        setSelectedJob(job);
+        setIsDetailOpen(true);
+      }
+    }
+  }, [firestoreJobs, window.location.search]);
+
+  useEffect(() => {
     // For guests and students, only show active jobs
     const q = query(collection(db, 'jobs'), where('status', '==', 'active'));
     let isInitialLoad = true;

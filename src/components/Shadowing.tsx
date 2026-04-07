@@ -1,6 +1,6 @@
 import { Timer, MapPin, Users, Star, Trophy, MessageSquare, Search, Filter, SlidersHorizontal, ArrowRight, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth, useFirebase } from './FirebaseProvider';
@@ -28,6 +28,18 @@ export default function Shadowing() {
       return matchesSearch && matchesCategory;
     });
   }, [searchQuery, activeCategory]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('id');
+    if (eventId) {
+      const event = MOCK_SHADOWING.find(e => e.id.toString() === eventId);
+      if (event) {
+        setSelectedEvent(event);
+        setIsDetailOpen(true);
+      }
+    }
+  }, [window.location.search]);
 
   const handleOpenDetail = (event: any) => {
     setSelectedEvent(event);

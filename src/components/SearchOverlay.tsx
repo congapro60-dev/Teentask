@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
 import { cn } from '../lib/utils';
+import { MOCK_SHADOWING } from '../mockData';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -18,11 +19,13 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     users: any[];
     jobs: any[];
     companies: any[];
-  }>({ users: [], jobs: [], companies: [] });
+    shadowing: any[];
+  }>({ users: [], jobs: [], companies: [], shadowing: [] });
   const [allData, setAllData] = useState<{
     users: any[];
     jobs: any[];
-  }>({ users: [], jobs: [] });
+    shadowing: any[];
+  }>({ users: [], jobs: [], shadowing: [] });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -32,10 +35,14 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       try {
         const usersSnap = await getDocs(query(collection(db, 'users'), limit(1000)));
         const jobsSnap = await getDocs(query(collection(db, 'jobs'), limit(1000)));
+        const shadowingSnap = await getDocs(query(collection(db, 'shadowing_events'), limit(1000)));
         
+        const firestoreShadowing = shadowingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
         setAllData({
           users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          jobs: jobsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          jobs: jobsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          shadowing: firestoreShadowing.length > 0 ? firestoreShadowing : MOCK_SHADOWING
         });
       } catch (error) {
         console.error("Error pre-fetching search data:", error);
@@ -58,7 +65,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setResults({ users: [], jobs: [], companies: [] });
+      setResults({ users: [], jobs: [], companies: [], shadowing: [] });
       return;
     }
 
@@ -79,10 +86,19 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
           j.description?.toLowerCase().includes(queryLower)
         );
 
+        const filteredShadowing = allData.shadowing.filter(s => 
+          s.title?.toLowerCase().includes(queryLower) ||
+          s.mentorName?.toLowerCase().includes(queryLower) ||
+          s.mentor?.toLowerCase().includes(queryLower) ||
+          s.companyName?.toLowerCase().includes(queryLower) ||
+          s.company?.toLowerCase().includes(queryLower)
+        );
+
         setResults({
           users: filteredUsers.filter((u: any) => u.role !== 'business').slice(0, 20),
           jobs: filteredJobs.slice(0, 20),
-          companies: filteredUsers.filter((u: any) => u.role === 'business').slice(0, 20)
+          companies: filteredUsers.filter((u: any) => u.role === 'business').slice(0, 20),
+          shadowing: filteredShadowing.slice(0, 20)
         });
       } catch (error) {
         console.error("Search error:", error);
@@ -111,7 +127,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     if (type === 'user') {
       navigate(role === 'business' ? `/company/${id}` : `/student/${id}`);
     }
-    if (type === 'job') navigate(`/jobs`);
+    if (type === 'job') navigate(`/jobs?id=${id}`);
+    if (type === 'shadowing') navigate(`/shadowing?id=${id}`);
   };
 
   return (
@@ -345,7 +362,35 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                       </div>
                     )}
 
-                    {results.users.length === 0 && results.jobs.length === 0 && results.companies.length === 0 && (
+                    {results.shadowing.length > 0 && (activeCategory === 'all' || activeCategory === 'shadowing') && (
+                      <div>
+                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Kiến tập cao cấp</h3>
+                        <div className="space-y-2">
+                          {results.shadowing.map(event => (
+                            <button 
+                              key={event.id}
+                              onClick={() => handleResultClick('shadowing', event.id)}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 overflow-hidden">
+                                {event.imageUrl || event.image ? (
+                                  <img src={event.imageUrl || event.image} alt={event.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <GraduationCap size={24} />
+                                )}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <p className="text-sm font-bold text-gray-900 line-clamp-1">{event.title}</p>
+                                <p className="text-[10px] text-gray-500 font-medium">{event.mentorName || event.mentor} @ {event.companyName || event.company}</p>
+                              </div>
+                              <ChevronRight size={16} className="text-gray-300" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {results.users.length === 0 && results.jobs.length === 0 && results.companies.length === 0 && results.shadowing.length === 0 && (
                       <div className="text-center py-20">
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Search size={32} className="text-gray-300" />
