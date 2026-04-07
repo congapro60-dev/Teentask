@@ -184,7 +184,7 @@ export default function Home() {
         ]}
         renderItem={(item: any) => (
           <div className="w-[280px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <img src={item.image} alt={item.title} className="w-full h-40 object-cover" />
+            <img src={item.image} alt={item.title} className="w-full h-40 object-cover" referrerPolicy="no-referrer" />
             <div className="p-4">
               <span className="text-[10px] font-bold text-[#1877F2] uppercase tracking-wider">{item.date}</span>
               <h4 className="font-bold text-gray-900 mt-1 line-clamp-2">{item.title}</h4>
@@ -207,7 +207,7 @@ export default function Home() {
         ]}
         renderItem={(ad: any) => (
           <div className="w-[320px] relative rounded-3xl overflow-hidden aspect-[16/9] shadow-lg group">
-            <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-5 flex flex-col justify-end">
               <span className="w-fit px-2 py-1 bg-amber-400 text-white text-[8px] font-black uppercase rounded-md mb-2">Tài trợ</span>
               <h4 className="text-white font-bold text-lg line-clamp-1">{ad.title}</h4>
@@ -287,12 +287,12 @@ export default function Home() {
               >
                 <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
               </button>
-              <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-5 flex flex-col justify-end">
                 <h4 className="text-white font-bold text-lg leading-tight mb-2">{item.title}</h4>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md overflow-hidden">
-                    <img src={`https://i.pravatar.cc/100?u=${item.mentor}`} alt={item.mentor} />
+                    <img src={`https://i.pravatar.cc/100?u=${item.mentor}`} alt={item.mentor} referrerPolicy="no-referrer" />
                   </div>
                   <p className="text-white/80 text-[10px] font-medium">{item.mentor} @ {item.company}</p>
                 </div>
@@ -317,7 +317,7 @@ export default function Home() {
         renderItem={(item: any) => (
           <div className="w-[140px] p-4 bg-white border border-gray-100 rounded-3xl text-center shadow-sm hover:shadow-md transition-all">
             <div className="w-16 h-16 bg-gray-50 rounded-2xl mx-auto mb-3 overflow-hidden border border-gray-50">
-              <img src={item.logo} alt={item.name} className="w-full h-full object-cover" />
+              <img src={item.logo} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
             <h4 className="font-bold text-gray-900 text-xs mb-1 line-clamp-1">{item.name}</h4>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{item.jobs} công việc</p>
@@ -360,7 +360,7 @@ export default function Home() {
           <div className="w-[160px] text-center">
             <div className="w-24 h-24 rounded-full mx-auto mb-3 p-1 bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg">
               <div className="w-full h-full rounded-full bg-white p-1">
-                <img src={item.image} alt={item.name} className="w-full h-full rounded-full object-cover" />
+                <img src={item.image} alt={item.name} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
               </div>
             </div>
             <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
@@ -398,7 +398,7 @@ export default function Home() {
         <div className="space-y-4">
           <div className="bg-pink-50/50 rounded-[32px] p-6 border border-pink-100">
             <div className="flex items-center gap-4 mb-4">
-              <img src="https://i.pravatar.cc/100?u=success1" alt="student" className="w-12 h-12 rounded-2xl object-cover shadow-md" />
+              <img src="https://i.pravatar.cc/100?u=success1" alt="student" className="w-12 h-12 rounded-2xl object-cover shadow-md" referrerPolicy="no-referrer" />
               <div>
                 <h4 className="font-bold text-gray-900 text-sm">Minh Anh, 17 tuổi</h4>
                 <p className="text-[10px] text-pink-600 font-black uppercase tracking-wider">Học sinh THPT Phan Đình Phùng</p>
@@ -410,7 +410,7 @@ export default function Home() {
           </div>
           <div className="bg-blue-50/50 rounded-[32px] p-6 border border-blue-100">
             <div className="flex items-center gap-4 mb-4">
-              <img src="https://i.pravatar.cc/100?u=success2" alt="student" className="w-12 h-12 rounded-2xl object-cover shadow-md" />
+              <img src="https://i.pravatar.cc/100?u=success2" alt="student" className="w-12 h-12 rounded-2xl object-cover shadow-md" referrerPolicy="no-referrer" />
               <div>
                 <h4 className="font-bold text-gray-900 text-sm">Đức Huy, 16 tuổi</h4>
                 <p className="text-[10px] text-blue-600 font-black uppercase tracking-wider">Học sinh THPT Chu Văn An</p>

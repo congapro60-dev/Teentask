@@ -260,7 +260,7 @@ export default function Wallet() {
                   <div className="bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center border border-slate-100">
                     <p className="text-sm font-bold text-slate-700 mb-4 text-center">Quét mã QR bằng ứng dụng ngân hàng</p>
                     <div className="bg-white p-2 rounded-2xl shadow-sm mb-4">
-                      <img src={qrUrl} alt="VietQR" className="w-48 h-48 object-contain" />
+                      <img src={qrUrl} alt="VietQR" className="w-48 h-48 object-contain" referrerPolicy="no-referrer" />
                     </div>
                     <div className="w-full space-y-2 text-sm">
                       <div className="flex justify-between">

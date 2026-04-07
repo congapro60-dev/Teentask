@@ -168,6 +168,7 @@ export default function Notifications() {
                   src={notif.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.title)}&background=random`} 
                   alt="" 
                   className="w-14 h-14 rounded-full object-cover border border-gray-100"
+                  referrerPolicy="no-referrer"
                 />
                 <div className="absolute -bottom-1 -right-1 border-2 border-white rounded-full">
                   {getBadgeIcon(notif.type)}

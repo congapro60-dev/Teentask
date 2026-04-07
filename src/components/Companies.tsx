@@ -172,7 +172,7 @@ export default function Companies() {
 
                   <div className="absolute bottom-6 left-8 right-8 flex items-center gap-4">
                     <div className="w-16 h-16 bg-white rounded-2xl p-2 shadow-2xl group-hover:scale-110 transition-transform">
-                      <img src={company.logo} alt={company.name} className="w-full h-full object-contain rounded-lg" />
+                      <img src={company.logo} alt={company.name} className="w-full h-full object-contain rounded-lg" referrerPolicy="no-referrer" />
                     </div>
                     <div>
                       <h3 className="text-2xl font-black text-white leading-tight group-hover:text-amber-400 transition-colors">

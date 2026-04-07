@@ -199,7 +199,7 @@ export default function VerificationFlow({ onClose }: VerificationFlowProps) {
             <div className="relative aspect-[3/2] bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden">
               {idPhoto ? (
                 <>
-                  <img src={idPhoto} alt="ID Card" className="w-full h-full object-cover" />
+                  <img src={idPhoto} alt="ID Card" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   <button 
                     onClick={() => setIdPhoto(null)}
                     className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full backdrop-blur-md"

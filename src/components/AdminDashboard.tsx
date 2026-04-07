@@ -277,7 +277,7 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex gap-4">
-                    <img src={user.photoURL} alt={user.displayName} className="w-12 h-12 rounded-2xl object-cover border border-gray-100" />
+                    <img src={user.photoURL} alt={user.displayName} className="w-12 h-12 rounded-2xl object-cover border border-gray-100" referrerPolicy="no-referrer" />
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-gray-900">{user.displayName}</h3>
@@ -365,7 +365,7 @@ export default function AdminDashboard() {
                     {ad.status === 'approved' ? 'Đã duyệt' : ad.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
                   </div>
                 </div>
-                <img src={ad.imageUrl} className="w-full h-32 object-cover rounded-2xl mb-4" alt="" />
+                <img src={ad.imageUrl} className="w-full h-32 object-cover rounded-2xl mb-4" alt="" referrerPolicy="no-referrer" />
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setSelectedAd(ad)}
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
                 <X size={20} />
               </button>
               <div className="flex items-start gap-6 mb-8">
-                <img src={selectedUser.photoURL} alt="" className="w-20 h-20 rounded-3xl object-cover border-4 border-gray-50" />
+                <img src={selectedUser.photoURL} alt="" className="w-20 h-20 rounded-3xl object-cover border-4 border-gray-50" referrerPolicy="no-referrer" />
                 <div>
                   <h2 className="text-3xl font-black tracking-tighter text-gray-900">{selectedUser.displayName}</h2>
                   <p className="text-gray-500 font-medium">{selectedUser.email}</p>
@@ -532,7 +532,7 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Ảnh giấy tờ</h3>
                   <div className="aspect-[3/2] bg-gray-100 rounded-2xl overflow-hidden border border-gray-200">
-                    {selectedUser.idCardPhoto && <img src={selectedUser.idCardPhoto} alt="ID Card" className="w-full h-full object-cover" />}
+                    {selectedUser.idCardPhoto && <img src={selectedUser.idCardPhoto} alt="ID Card" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                   </div>
                 </div>
               </div>
@@ -583,7 +583,7 @@ export default function AdminDashboard() {
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-2xl bg-white rounded-[40px] p-8 shadow-2xl relative">
               <button onClick={() => setSelectedAd(null)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"><X size={20} /></button>
               <h2 className="text-2xl font-black mb-4">{selectedAd.title}</h2>
-              <img src={selectedAd.imageUrl} className="w-full h-64 object-cover rounded-3xl mb-6" alt="" />
+              <img src={selectedAd.imageUrl} className="w-full h-64 object-cover rounded-3xl mb-6" alt="" referrerPolicy="no-referrer" />
               <p className="text-gray-500 mb-8">{selectedAd.description}</p>
               {selectedAd.status === 'pending' && (
                 <div className="flex gap-4">

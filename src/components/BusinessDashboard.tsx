@@ -113,7 +113,7 @@ export default function BusinessDashboard() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-slate-900 rounded-[20px] border-2 border-white/5 overflow-hidden shadow-inner group-hover:scale-110 transition-transform">
-                    <img src={`https://i.pravatar.cc/100?u=student_${i}`} alt="student" className="w-full h-full object-cover" />
+                    <img src={`https://i.pravatar.cc/100?u=student_${i}`} alt="student" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div>
                     <h4 className="text-base font-black text-white tracking-tight">Nguyễn Văn {i}</h4>

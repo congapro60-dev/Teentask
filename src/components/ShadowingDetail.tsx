@@ -82,7 +82,7 @@ export default function ShadowingDetail({ event, isOpen, onClose, onChat }: Shad
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <div className="flex items-center gap-5 mb-10 p-6 bg-white/5 rounded-[32px] border border-white/10 shadow-inner">
                     <div className="w-16 h-16 bg-slate-900 rounded-[24px] border-4 border-white/5 overflow-hidden shadow-2xl">
-                      <img src={`https://i.pravatar.cc/100?u=${event.mentor}`} alt={event.mentor} className="w-full h-full object-cover" />
+                      <img src={`https://i.pravatar.cc/100?u=${event.mentor}`} alt={event.mentor} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <div>
                       <h4 className="text-white font-black text-lg tracking-tight leading-tight">{event.mentor}</h4>
