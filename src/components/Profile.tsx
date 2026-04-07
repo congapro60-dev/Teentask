@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, Award, MapPin, ExternalLink, Download, ShieldCheck, Clock, XCircle, ChevronRight, Star, X, Bell, AlertTriangle, Check, Plus, Building2, UserPlus, UserCheck, Users, Heart, Briefcase as BriefcaseIcon, User, LogOut, Edit2, Trash2 } from 'lucide-react';
+import { Settings, Shield, Award, MapPin, ExternalLink, Download, ShieldCheck, Clock, XCircle, ChevronRight, Star, X, Bell, AlertTriangle, Check, Plus, Building2, UserPlus, UserCheck, Users, Heart, Briefcase as BriefcaseIcon, User, LogOut, Edit2, Trash2, Calendar, Phone, Mail, Globe, GraduationCap, Languages } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useFirebase } from './FirebaseProvider';
@@ -23,6 +23,7 @@ export default function Profile() {
   const [isStudentEditModalOpen, setIsStudentEditModalOpen] = useState(false);
   const [isBusinessEditModalOpen, setIsBusinessEditModalOpen] = useState(false);
   const [isNameChangeModalOpen, setIsNameChangeModalOpen] = useState(false);
+  const [isPersonalInfoModalOpen, setIsPersonalInfoModalOpen] = useState(false);
   const [isRelationshipModalOpen, setIsRelationshipModalOpen] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<UserProfile | null>(null);
   const [relationshipType, setRelationshipType] = useState<'Family' | 'Professional'>('Family');
@@ -42,6 +43,16 @@ export default function Profile() {
     companySize: '',
     foundedYear: 2024
   });
+  const [personalInfoData, setPersonalInfoData] = useState({
+    fullName: '',
+    dob: '',
+    gender: 'Nam' as 'Nam' | 'Nữ' | 'Khác',
+    phone: '',
+    location: '',
+    school: '',
+    class: '',
+    bio: ''
+  });
   const [nameChangeData, setNameChangeData] = useState({
     newName: '',
     reason: '',
@@ -60,6 +71,16 @@ export default function Profile() {
         website: profile.website || '',
         companySize: profile.companySize || '',
         foundedYear: profile.foundedYear || 2024
+      });
+      setPersonalInfoData({
+        fullName: profile.fullName || '',
+        dob: profile.dob || '',
+        gender: profile.gender || 'Nam',
+        phone: profile.phone || '',
+        location: profile.location || '',
+        school: profile.school || '',
+        class: profile.class || '',
+        bio: profile.bio || ''
       });
     }
   }, [profile]);
@@ -443,6 +464,17 @@ export default function Profile() {
     } catch (error) {
       console.error("Error updating business profile:", error);
       alert('Có lỗi xảy ra khi cập nhật hồ sơ.');
+    }
+  };
+
+  const savePersonalInfo = async () => {
+    try {
+      await updateProfile(personalInfoData);
+      setIsPersonalInfoModalOpen(false);
+      alert('Cập nhật thông tin cá nhân thành công!');
+    } catch (error) {
+      console.error("Error updating personal info:", error);
+      alert('Có lỗi xảy ra khi cập nhật thông tin.');
     }
   };
 
@@ -994,15 +1026,12 @@ export default function Profile() {
                 Cài đặt tài khoản
               </h3>
               <div className="space-y-1">
-                <button className="w-full flex justify-between items-center p-3 hover:bg-gray-50 rounded-2xl transition-colors text-sm text-gray-600 group">
+                <button 
+                  onClick={() => setIsPersonalInfoModalOpen(true)}
+                  className="w-full flex justify-between items-center p-3 hover:bg-gray-50 rounded-2xl transition-colors text-sm text-gray-600 group"
+                >
                   <span className="font-medium group-hover:text-gray-900">Thông tin cá nhân</span>
                   <ChevronRight size={16} className="text-gray-300" />
-                </button>
-                <button className="w-full flex justify-between items-center p-3 hover:bg-gray-50 rounded-2xl transition-colors text-sm text-gray-600 group">
-                  <span className="font-medium group-hover:text-gray-900">Trạng thái hồ sơ</span>
-                  <span className={`text-[10px] ${verificationUI?.badgeColor} px-2 py-0.5 rounded-full font-bold`}>
-                    {verificationUI?.label}
-                  </span>
                 </button>
                 {(profile?.role === 'business' || profile?.role === 'parent') && (
                   <button 
@@ -1025,6 +1054,185 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Personal Info Modal */}
+      <AnimatePresence>
+        {isPersonalInfoModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <User size={20} />
+                  </div>
+                  <h3 className="text-xl font-black text-gray-900">Thông tin cá nhân</h3>
+                </div>
+                <button onClick={() => setIsPersonalInfoModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-8 overflow-y-auto no-scrollbar">
+                {/* Basic Info Section */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Thông tin cơ bản</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 ml-1">Họ và tên</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                          type="text"
+                          value={personalInfoData.fullName}
+                          onChange={(e) => setPersonalInfoData({ ...personalInfoData, fullName: e.target.value })}
+                          placeholder="Ví dụ: Nguyễn Văn A"
+                          className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 ml-1">Ngày sinh</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                          type="date"
+                          value={personalInfoData.dob}
+                          onChange={(e) => setPersonalInfoData({ ...personalInfoData, dob: e.target.value })}
+                          className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 ml-1">Giới tính</label>
+                      <div className="flex gap-2">
+                        {['Nam', 'Nữ', 'Khác'].map((g) => (
+                          <button
+                            key={g}
+                            onClick={() => setPersonalInfoData({ ...personalInfoData, gender: g as any })}
+                            className={`flex-1 py-3 rounded-2xl text-sm font-bold border-2 transition-all ${
+                              personalInfoData.gender === g 
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-600' 
+                              : 'border-transparent bg-gray-50 text-gray-400 hover:bg-gray-100'
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 ml-1">Số điện thoại</label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                          type="tel"
+                          value={personalInfoData.phone}
+                          onChange={(e) => setPersonalInfoData({ ...personalInfoData, phone: e.target.value })}
+                          placeholder="Nhập số điện thoại..."
+                          className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location & Social Section */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Vị trí & Liên hệ</h4>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 ml-1">Địa chỉ / Vị trí hiện tại</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="text"
+                        value={personalInfoData.location}
+                        onChange={(e) => setPersonalInfoData({ ...personalInfoData, location: e.target.value })}
+                        placeholder="Ví dụ: Hà Nội, Việt Nam"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 ml-1">Email liên hệ</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="email"
+                        value={profile?.email}
+                        disabled
+                        className="w-full pl-12 pr-4 py-3 bg-gray-100 border-2 border-transparent rounded-2xl text-sm font-medium text-gray-400 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Education Section (if student) */}
+                {profile?.role === 'student' && (
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Học vấn</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 ml-1">Trường học</label>
+                        <div className="relative">
+                          <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                          <input
+                            type="text"
+                            value={personalInfoData.school}
+                            onChange={(e) => setPersonalInfoData({ ...personalInfoData, school: e.target.value })}
+                            placeholder="Tên trường học..."
+                            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 ml-1">Lớp</label>
+                        <input
+                          type="text"
+                          value={personalInfoData.class}
+                          onChange={(e) => setPersonalInfoData({ ...personalInfoData, class: e.target.value })}
+                          placeholder="Ví dụ: 12A1"
+                          className="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bio Section */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Giới thiệu</h4>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 ml-1">Mô tả bản thân</label>
+                    <textarea
+                      value={personalInfoData.bio}
+                      onChange={(e) => setPersonalInfoData({ ...personalInfoData, bio: e.target.value })}
+                      placeholder="Hãy viết vài dòng về bản thân bạn..."
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium min-h-[120px] resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-gray-50 border-t border-gray-100">
+                <button
+                  onClick={savePersonalInfo}
+                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+                >
+                  LƯU THÔNG TIN
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Relationship Modal */}
       <AnimatePresence>

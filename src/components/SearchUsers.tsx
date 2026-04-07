@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, UserPlus, UserCheck, Clock, User, Star, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
-import { collection, query, getDocs, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, where, onSnapshot, limit } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
 import { UserProfile, FriendRequest } from '../types';
 import { useNavigate } from 'react-router-dom';
@@ -11,8 +11,54 @@ export default function SearchUsers() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [sentRequests, setSentRequests] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Pre-fetch users for client-side filtering
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(db, 'users'), limit(1000));
+        const snapshot = await getDocs(q);
+        const results = snapshot.docs
+          .map(doc => doc.data() as UserProfile)
+          .filter(u => u.uid !== profile?.uid);
+        setAllUsers(results);
+        // Initially show some users if no search
+        if (!searchQuery) {
+          setUsers(results.slice(0, 10));
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (profile) {
+      fetchAllUsers();
+    }
+  }, [profile]);
+
+  // Real-time debounced search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (!searchQuery.trim()) {
+        setUsers(allUsers.slice(0, 10));
+        return;
+      }
+
+      const filtered = allUsers.filter(user => 
+        user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.role?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setUsers(filtered);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, allUsers]);
 
   useEffect(() => {
     if (!profile) return;
@@ -32,25 +78,16 @@ export default function SearchUsers() {
     return () => unsubscribe();
   }, [profile]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setLoading(true);
-    try {
-      const q = query(
-        collection(db, 'users'),
-        where('displayName', '>=', searchQuery),
-        where('displayName', '<=', searchQuery + '\uf8ff')
-      );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs
-        .map(doc => doc.data() as UserProfile)
-        .filter(u => u.uid !== profile?.uid);
-      setUsers(results);
-    } catch (error) {
-      console.error("Error searching users:", error);
-    } finally {
-      setLoading(false);
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setUsers(allUsers.slice(0, 10));
+      return;
     }
+    const filtered = allUsers.filter(user => 
+      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.role?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setUsers(filtered);
   };
 
   const handleSendRequest = async (toId: string) => {

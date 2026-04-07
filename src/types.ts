@@ -7,6 +7,7 @@ export interface UserProfile {
   photoURL?: string;
   role?: UserRole;
   dob?: string;
+  gender?: 'Nam' | 'Nữ' | 'Khác';
   parentEmail?: string;
   trustScore: number;
   bio?: string;

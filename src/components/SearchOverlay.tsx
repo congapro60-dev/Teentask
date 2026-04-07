@@ -19,8 +19,32 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     jobs: any[];
     companies: any[];
   }>({ users: [], jobs: [], companies: [] });
+  const [allData, setAllData] = useState<{
+    users: any[];
+    jobs: any[];
+  }>({ users: [], jobs: [] });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Pre-fetch data for better search experience
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const usersSnap = await getDocs(query(collection(db, 'users'), limit(1000)));
+        const jobsSnap = await getDocs(query(collection(db, 'jobs'), limit(1000)));
+        
+        setAllData({
+          users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          jobs: jobsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        });
+      } catch (error) {
+        console.error("Error pre-fetching search data:", error);
+      }
+    };
+    if (isOpen) {
+      fetchData();
+    }
+  }, [isOpen]);
 
   const categories = [
     { id: 'all', label: 'Tất cả', icon: Search },
@@ -38,44 +62,37 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       return;
     }
 
-    const delayDebounceFn = setTimeout(async () => {
+    const delayDebounceFn = setTimeout(() => {
       setLoading(true);
       try {
-        // Search for users
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('displayName', '>=', searchQuery),
-          where('displayName', '<=', searchQuery + '\uf8ff'),
-          limit(20)
-        );
-        const usersSnap = await getDocs(usersQuery);
+        const queryLower = searchQuery.toLowerCase();
         
-        // Search for jobs
-        const jobsQuery = query(
-          collection(db, 'jobs'),
-          where('title', '>=', searchQuery),
-          where('title', '<=', searchQuery + '\uf8ff'),
-          limit(20)
+        const filteredUsers = allData.users.filter(u => 
+          u.displayName?.toLowerCase().includes(queryLower) ||
+          u.role?.toLowerCase().includes(queryLower) ||
+          u.email?.toLowerCase().includes(queryLower)
         );
-        const jobsSnap = await getDocs(jobsQuery);
-        
-        const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const allJobs = jobsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const filteredJobs = allData.jobs.filter(j => 
+          j.title?.toLowerCase().includes(queryLower) ||
+          j.companyName?.toLowerCase().includes(queryLower) ||
+          j.description?.toLowerCase().includes(queryLower)
+        );
 
         setResults({
-          users: allUsers.filter((u: any) => u.role !== 'business'),
-          jobs: allJobs,
-          companies: allUsers.filter((u: any) => u.role === 'business')
+          users: filteredUsers.filter((u: any) => u.role !== 'business').slice(0, 20),
+          jobs: filteredJobs.slice(0, 20),
+          companies: filteredUsers.filter((u: any) => u.role === 'business').slice(0, 20)
         });
       } catch (error) {
         console.error("Search error:", error);
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, allData]);
 
   const handleCategoryClick = (id: string) => {
     if (id === 'jobs') {
