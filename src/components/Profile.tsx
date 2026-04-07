@@ -10,7 +10,7 @@ import { PREDEFINED_SKILLS } from '../constants';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { profile, logout, updateProfile, acceptFriendRequest, rejectFriendRequest, addRelationship, submitRating } = useFirebase();
+  const { profile, logout, updateProfile, acceptFriendRequest, rejectFriendRequest, addRelationship, submitRating, submitNameChangeRequest } = useFirebase();
   const [applications, setApplications] = useState<(Application & { job?: Job })[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
@@ -22,6 +22,7 @@ export default function Profile() {
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [isStudentEditModalOpen, setIsStudentEditModalOpen] = useState(false);
   const [isBusinessEditModalOpen, setIsBusinessEditModalOpen] = useState(false);
+  const [isNameChangeModalOpen, setIsNameChangeModalOpen] = useState(false);
   const [isRelationshipModalOpen, setIsRelationshipModalOpen] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<UserProfile | null>(null);
   const [relationshipType, setRelationshipType] = useState<'Family' | 'Professional'>('Family');
@@ -41,6 +42,12 @@ export default function Profile() {
     companySize: '',
     foundedYear: 2024
   });
+  const [nameChangeData, setNameChangeData] = useState({
+    newName: '',
+    reason: '',
+    proofUrl: ''
+  });
+  const [submittingNameChange, setSubmittingNameChange] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -322,6 +329,37 @@ export default function Profile() {
     }
   };
 
+  const handleNameChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nameChangeData.newName || !nameChangeData.reason || !nameChangeData.proofUrl) {
+      alert('Vui lòng điền đầy đủ thông tin và tải lên minh chứng.');
+      return;
+    }
+    setSubmittingNameChange(true);
+    try {
+      await submitNameChangeRequest(nameChangeData.newName, nameChangeData.reason, nameChangeData.proofUrl);
+      setIsNameChangeModalOpen(false);
+      setNameChangeData({ newName: '', reason: '', proofUrl: '' });
+      alert('Yêu cầu đổi tên đã được gửi và đang chờ phê duyệt.');
+    } catch (error) {
+      console.error("Error submitting name change request:", error);
+      alert('Có lỗi xảy ra khi gửi yêu cầu.');
+    } finally {
+      setSubmittingNameChange(false);
+    }
+  };
+
+  const handleProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNameChangeData(prev => ({ ...prev, proofUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleDeposit = async () => {
     if (!depositAmount || isNaN(Number(depositAmount))) return;
     try {
@@ -441,6 +479,13 @@ export default function Profile() {
           <div className="text-center space-y-1">
             <h2 className="text-2xl font-black text-gray-900 flex items-center justify-center gap-2">
               {profile?.displayName}
+              <button 
+                onClick={() => setIsNameChangeModalOpen(true)}
+                className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-indigo-600 transition-colors"
+                title="Đổi tên hiển thị"
+              >
+                <Edit2 size={14} />
+              </button>
               {profile?.email === "congapro60@gmail.com" && <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-md font-black uppercase tracking-tighter">Boss</span>}
               {profile?.role === 'admin' && profile?.email !== "congapro60@gmail.com" && <span className="bg-indigo-100 text-indigo-600 text-[10px] px-2 py-0.5 rounded-md font-black uppercase tracking-tighter">Admin</span>}
               {profile?.isVip && <Star size={20} className="text-amber-500" fill="currentColor" />}
@@ -1546,6 +1591,98 @@ export default function Profile() {
                   CẬP NHẬT HỒ SƠ
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Name Change Request Modal */}
+      <AnimatePresence>
+        {isNameChangeModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-xl font-black text-gray-900">Yêu cầu đổi tên hiển thị</h3>
+                <button onClick={() => setIsNameChangeModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleNameChangeSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-6 space-y-6 overflow-y-auto no-scrollbar">
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Tên hiển thị hiện tại</label>
+                    <div className="w-full px-4 py-3 bg-gray-100 border-2 border-transparent rounded-2xl text-sm font-medium text-gray-500">
+                      {profile?.displayName}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Tên hiển thị mới</label>
+                    <input
+                      type="text"
+                      required
+                      value={nameChangeData.newName}
+                      onChange={(e) => setNameChangeData({ ...nameChangeData, newName: e.target.value })}
+                      placeholder="Nhập tên mới muốn hiển thị..."
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Lí do đổi tên</label>
+                    <textarea
+                      required
+                      value={nameChangeData.reason}
+                      onChange={(e) => setNameChangeData({ ...nameChangeData, reason: e.target.value })}
+                      placeholder="Giải thích lí do bạn muốn đổi tên..."
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600/20 outline-none transition-all text-sm font-medium min-h-[100px]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Minh chứng xác thực</label>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-3xl cursor-pointer hover:bg-gray-50 transition-all">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Plus className="w-8 h-8 text-gray-400 mb-2" />
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Tải ảnh lên</p>
+                          </div>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleProofUpload} />
+                        </label>
+                      </div>
+                      {nameChangeData.proofUrl && (
+                        <div className="relative aspect-video rounded-2xl overflow-hidden border border-gray-100">
+                          <img src={nameChangeData.proofUrl} alt="Proof" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <button 
+                            type="button"
+                            onClick={() => setNameChangeData(prev => ({ ...prev, proofUrl: '' }))}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-gray-50 border-t border-gray-100">
+                  <button
+                    type="submit"
+                    disabled={submittingNameChange}
+                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
+                  >
+                    {submittingNameChange ? 'ĐANG GỬI...' : 'GỬI YÊU CẦU'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

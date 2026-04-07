@@ -73,6 +73,7 @@ interface FirebaseContextType {
   sendNotification: (userId: string, title: string, message: string, type: string, link?: string) => Promise<void>;
   toggleSaveJob: (jobId: string) => Promise<void>;
   toggleSaveShadowing: (shadowingId: string) => Promise<void>;
+  submitNameChangeRequest: (newName: string, reason: string, proofUrl: string) => Promise<void>;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
@@ -383,12 +384,30 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const submitNameChangeRequest = async (newName: string, reason: string, proofUrl: string) => {
+    if (!user || !profile) return;
+    const path = 'name_change_requests';
+    try {
+      await addDoc(collection(db, 'name_change_requests'), {
+        userId: user.uid,
+        currentName: profile.displayName,
+        newName,
+        reason,
+        proofUrl,
+        status: 'pending',
+        createdAt: Date.now()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
   return (
     <FirebaseContext.Provider value={{ 
       user, profile, loading, login, logout, updateProfile, 
       sendFriendRequest, acceptFriendRequest, rejectFriendRequest, 
       addRelationship, submitRating, createChat, sendNotification,
-      toggleSaveJob, toggleSaveShadowing
+      toggleSaveJob, toggleSaveShadowing, submitNameChangeRequest
     }}>
       {children}
     </FirebaseContext.Provider>

@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, UserCheck, UserX, Search, Filter, Clock, CheckCircle2, XCircle, AlertCircle, Eye, X, Briefcase, MessageSquare, Megaphone, Send } from 'lucide-react';
+import { ShieldCheck, UserCheck, UserX, Search, Filter, Clock, CheckCircle2, XCircle, AlertCircle, Eye, X, Briefcase, MessageSquare, Megaphone, Send, UserCog } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, addDoc, orderBy, limit, getDoc } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
 import { Job, Advertisement } from '../types';
 
 export default function AdminDashboard() {
   const { profile, loading: firebaseLoading } = useFirebase();
-  const [activeTab, setActiveTab] = useState<'users' | 'jobs' | 'messages' | 'ads' | 'transactions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'jobs' | 'messages' | 'ads' | 'transactions' | 'name_changes'>('users');
   const [users, setUsers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [nameChangeRequests, setNameChangeRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'rejected' | 'approved'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +21,7 @@ export default function AdminDashboard() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [selectedAd, setSelectedAd] = useState<Advertisement | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [selectedNameChange, setSelectedNameChange] = useState<any>(null);
   const [replyText, setReplyText] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -63,6 +65,12 @@ export default function AdminDashboard() {
       console.error("Error in transactions listener:", error);
     });
 
+    const unsubNameChanges = onSnapshot(query(collection(db, 'name_change_requests'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setNameChangeRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error in name changes listener:", error);
+    });
+
     setLoading(false);
     return () => {
       unsubUsers();
@@ -70,6 +78,7 @@ export default function AdminDashboard() {
       unsubAds();
       unsubMessages();
       unsubTransactions();
+      unsubNameChanges();
     };
   }, [firebaseLoading, isAdmin]);
 
@@ -107,6 +116,45 @@ export default function AdminDashboard() {
       setSelectedAd(null);
     } catch (error) {
       console.error("Error approving ad:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveNameChange = async (requestId: string, status: 'approved' | 'rejected', newName: string, userId: string) => {
+    setActionLoading(true);
+    try {
+      await updateDoc(doc(db, 'name_change_requests', requestId), { 
+        status,
+        reviewedAt: Date.now()
+      });
+      
+      if (status === 'approved') {
+        await updateDoc(doc(db, 'users', userId), { displayName: newName });
+        
+        // Send notification
+        await addDoc(collection(db, 'notifications'), {
+          userId,
+          title: 'Yêu cầu đổi tên đã được phê duyệt',
+          message: `Tên hiển thị của bạn đã được đổi thành "${newName}".`,
+          type: 'system',
+          read: false,
+          createdAt: Date.now()
+        });
+      } else {
+        // Send notification for rejection
+        await addDoc(collection(db, 'notifications'), {
+          userId,
+          title: 'Yêu cầu đổi tên bị từ chối',
+          message: 'Yêu cầu đổi tên của bạn không được phê duyệt. Vui lòng kiểm tra lại minh chứng.',
+          type: 'system',
+          read: false,
+          createdAt: Date.now()
+        });
+      }
+      setSelectedNameChange(null);
+    } catch (error) {
+      console.error("Error approving name change:", error);
     } finally {
       setActionLoading(false);
     }
@@ -166,6 +214,14 @@ export default function AdminDashboard() {
         const matchesSearch = !searchQuery || tx.description.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesFilter && matchesSearch;
       });
+    } else if (activeTab === 'name_changes') {
+      return nameChangeRequests.filter(req => {
+        const matchesFilter = filter === 'all' || req.status === filter;
+        const matchesSearch = !searchQuery || 
+                             req.newName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                             req.currentName.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
+      });
     } else {
       return messages.filter(msg => {
         const matchesFilter = filter === 'all' || (filter === 'pending' ? !msg.replied : msg.replied);
@@ -214,6 +270,7 @@ export default function AdminDashboard() {
               { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
               { id: 'ads', label: 'Quảng cáo', icon: Megaphone },
               { id: 'transactions', label: 'Giao dịch', icon: CheckCircle2 },
+              { id: 'name_changes', label: 'Đổi tên', icon: UserCog },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -478,6 +535,40 @@ export default function AdminDashboard() {
                 )}
               </motion.div>
             ))}
+
+            {activeTab === 'name_changes' && filteredData().map((req: any) => (
+              <motion.div
+                key={req.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-indigo-100/50 transition-all group"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{req.currentName} → {req.newName}</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{new Date(req.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                    req.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' : 
+                    req.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                    'bg-red-50 text-red-600 border-red-100'
+                  }`}>
+                    {req.status === 'approved' ? 'Đã duyệt' : req.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 line-clamp-2 mb-4">Lí do: {req.reason}</p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setSelectedNameChange(req)}
+                    className="flex-1 py-3 bg-gray-50 text-gray-600 rounded-2xl text-xs font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Eye size={14} /> Chi tiết
+                  </button>
+                </div>
+              </motion.div>
+            ))}
           </AnimatePresence>
         </div>
 
@@ -626,6 +717,56 @@ export default function AdminDashboard() {
                     className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black flex items-center justify-center gap-2"
                   >
                     <Send size={20} /> GỬI PHẢN HỒI
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Name Change Detail Modal */}
+      <AnimatePresence>
+        {selectedNameChange && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-2xl bg-white rounded-[40px] p-8 shadow-2xl relative">
+              <button onClick={() => setSelectedNameChange(null)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h2 className="text-2xl font-black mb-2">Yêu cầu đổi tên</h2>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <p className="text-[10px] text-gray-400 font-bold uppercase">Tên hiện tại</p>
+                  <p className="font-bold">{selectedNameChange.currentName}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <p className="text-[10px] text-gray-400 font-bold uppercase">Tên mới</p>
+                  <p className="font-bold text-indigo-600">{selectedNameChange.newName}</p>
+                </div>
+              </div>
+              <div className="mb-6">
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-2">Lí do đổi tên</p>
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <p className="text-gray-700">{selectedNameChange.reason}</p>
+                </div>
+              </div>
+              <div className="mb-8">
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-2">Minh chứng xác thực</p>
+                <div className="aspect-video bg-gray-100 rounded-3xl overflow-hidden border border-gray-200">
+                  <img src={selectedNameChange.proofUrl} className="w-full h-full object-cover" alt="Proof" referrerPolicy="no-referrer" />
+                </div>
+              </div>
+              {selectedNameChange.status === 'pending' && (
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => handleApproveNameChange(selectedNameChange.id, 'rejected', selectedNameChange.newName, selectedNameChange.userId)} 
+                    className="flex-1 py-4 bg-red-50 text-red-600 rounded-2xl font-black"
+                  >
+                    TỪ CHỐI
+                  </button>
+                  <button 
+                    onClick={() => handleApproveNameChange(selectedNameChange.id, 'approved', selectedNameChange.newName, selectedNameChange.userId)} 
+                    className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black"
+                  >
+                    PHÊ DUYỆT ĐỔI TÊN
                   </button>
                 </div>
               )}

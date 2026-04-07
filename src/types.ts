@@ -226,3 +226,16 @@ export interface Transaction {
   description: string;
   createdAt: number;
 }
+
+export interface NameChangeRequest {
+  id: string;
+  userId: string;
+  currentName: string;
+  newName: string;
+  reason: string;
+  proofUrl: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: number;
+  reviewedAt?: number;
+  adminComment?: string;
+}
