@@ -1,21 +1,105 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowLeft, Award, MapPin, ExternalLink, ChevronRight, ShieldCheck, Star, User, GraduationCap, Mail, Phone, Briefcase } from 'lucide-react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ArrowLeft, Award, MapPin, ExternalLink, ChevronRight, ShieldCheck, Star, User, GraduationCap, Mail, Phone, Briefcase, UserPlus, UserCheck, Clock, MessageSquare, Heart } from 'lucide-react';
+import { doc, getDoc, setDoc, onSnapshot, query, collection, where, getDocs } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
-import { UserProfile } from '../types';
+import { UserProfile, FriendRequest, Relationship } from '../types';
 
 export default function StudentProfile() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile, sendFriendRequest, toggleFollowUser, createChat, unfriendUser } = useFirebase();
   const [loading, setLoading] = useState(true);
   const [studentInfo, setStudentInfo] = useState<UserProfile | null>(null);
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [friendRequestStatus, setFriendRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
 
   const BOSS_EMAIL = "congapro60@gmail.com";
   const isCurrentUserBoss = currentUserProfile?.email === BOSS_EMAIL;
+
+  const isFollowing = currentUserProfile?.following?.includes(studentId || '');
+  const isFriend = currentUserProfile?.friends?.includes(studentId || '');
+
+  useEffect(() => {
+    if (!studentId || !currentUserProfile) return;
+
+    const q = query(
+      collection(db, 'friend_requests'),
+      where('fromId', '==', currentUserProfile.uid),
+      where('toId', '==', studentId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const request = snapshot.docs[0].data() as FriendRequest;
+        setFriendRequestStatus(request.status);
+        setRequestId(request.id);
+      } else {
+        // Check reverse request
+        const q2 = query(
+          collection(db, 'friend_requests'),
+          where('fromId', '==', studentId),
+          where('toId', '==', currentUserProfile.uid)
+        );
+        onSnapshot(q2, (snapshot2) => {
+          if (!snapshot2.empty) {
+            const request = snapshot2.docs[0].data() as FriendRequest;
+            setFriendRequestStatus(request.status);
+            setRequestId(request.id);
+          } else {
+            setFriendRequestStatus('none');
+            setRequestId(null);
+          }
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [studentId, currentUserProfile]);
+
+  const handleFriendAction = async () => {
+    if (!studentId) return;
+    try {
+      if (isFriend) {
+        if (window.confirm('Bạn có chắc chắn muốn hủy kết bạn?')) {
+          await unfriendUser(studentId);
+        }
+      } else if (friendRequestStatus === 'pending') {
+        alert('Yêu cầu kết bạn đang chờ xử lý.');
+      } else {
+        await sendFriendRequest(studentId);
+        alert('Đã gửi yêu cầu kết bạn!');
+      }
+    } catch (error) {
+      console.error("Error friend action:", error);
+    }
+  };
+
+  const handleFollowAction = async () => {
+    if (!studentId) return;
+    try {
+      await toggleFollowUser(studentId);
+    } catch (error) {
+      console.error("Error follow action:", error);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!studentInfo) return;
+    try {
+      const chatId = await createChat(studentInfo.uid, {
+        displayName: studentInfo.displayName,
+        photoURL: studentInfo.photoURL,
+        role: studentInfo.role
+      });
+      navigate(`/messages/${chatId}`);
+    } catch (error) {
+      console.error("Error starting chat:", error);
+    }
+  };
 
   const toggleAdminRole = async () => {
     if (!studentId || !studentInfo) return;
@@ -46,6 +130,16 @@ export default function StudentProfile() {
         if (userDoc.exists()) {
           setStudentInfo({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
         }
+
+        // Fetch confirmed relationships (e.g. Parents)
+        const qRels = query(
+          collection(db, 'relationships'),
+          where('relatedUserId', '==', studentId),
+          where('status', '==', 'accepted'),
+          where('type', '==', 'Family')
+        );
+        const relSnap = await getDocs(qRels);
+        setRelationships(relSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Relationship)));
       } catch (error) {
         console.error("Error fetching student data:", error);
       } finally {
@@ -134,21 +228,62 @@ export default function StudentProfile() {
                 <MapPin size={16} />
                 {studentInfo.location || 'Việt Nam'}
               </div>
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <User size={16} />
+                {studentInfo.followers?.length || 0} người theo dõi
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-6">
               <div className="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100">
-                <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Tín nhiệm</p>
-                <div className="flex items-center justify-center gap-1">
-                  <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                  <p className="text-lg font-black text-gray-900">{studentInfo.trustScore ?? 0}</p>
-                </div>
+                <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Bạn bè</p>
+                <p className="text-lg font-black text-gray-900">{studentInfo.friends?.length || 0}</p>
               </div>
               <div className="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100">
                 <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Kỹ năng</p>
                 <p className="text-lg font-black text-gray-900">{studentInfo.skills?.length || 0}</p>
               </div>
             </div>
+
+            {currentUserProfile?.uid !== studentId && (
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                <button
+                  onClick={handleFriendAction}
+                  className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                    isFriend 
+                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                    : friendRequestStatus === 'pending'
+                    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'
+                  }`}
+                >
+                  {isFriend ? (
+                    <><UserCheck size={18} /> Bạn bè</>
+                  ) : friendRequestStatus === 'pending' ? (
+                    <><Clock size={18} /> Đã gửi</>
+                  ) : (
+                    <><UserPlus size={18} /> Kết bạn</>
+                  )}
+                </button>
+                <button
+                  onClick={handleFollowAction}
+                  className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                    isFollowing
+                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
+                </button>
+                <button
+                  onClick={handleMessage}
+                  className="col-span-2 py-3 bg-white border-2 border-gray-100 text-gray-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
+                >
+                  <MessageSquare size={18} className="text-indigo-600" />
+                  Nhắn tin
+                </button>
+              </div>
+            )}
 
             {isCurrentUserBoss && studentInfo.email !== BOSS_EMAIL && (
               <div className="mt-6">
@@ -171,6 +306,86 @@ export default function StudentProfile() {
       </div>
 
       <div className="p-6 max-w-2xl mx-auto space-y-6">
+        {/* Relationships Section (Verified by) */}
+        {relationships.length > 0 && (
+          <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-6">
+              <Heart size={18} className="text-red-500" />
+              Xác thực bởi Phụ huynh
+            </h3>
+            <div className="space-y-3">
+              {relationships.map(rel => (
+                <div key={rel.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white overflow-hidden border border-gray-100">
+                      {rel.userPhoto ? (
+                        <img src={rel.userPhoto} alt={rel.userName} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <User size={24} />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{rel.userName}</p>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                        Mối quan hệ: <span className="text-indigo-600">{rel.title}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full border border-green-100 flex items-center gap-1">
+                    <ShieldCheck size={12} />
+                    ĐÃ XÁC THỰC
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Personal Info Section */}
+        <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-6">
+            <User size={18} className="text-[#4F46E5]" />
+            Thông tin cá nhân
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
+              <User size={16} className="text-gray-400" />
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase">Giới tính</p>
+                <p className="text-sm font-medium text-gray-700">{studentInfo.gender || 'Chưa cập nhật'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
+              <Clock size={16} className="text-gray-400" />
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase">Ngày sinh</p>
+                <p className="text-sm font-medium text-gray-700">{studentInfo.dob ? new Date(studentInfo.dob).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
+              <MapPin size={16} className="text-gray-400" />
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase">Nơi ở</p>
+                <p className="text-sm font-medium text-gray-700">{studentInfo.location || 'Chưa cập nhật'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
+              <Briefcase size={16} className="text-gray-400" />
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase">Vai trò</p>
+                <p className="text-sm font-medium text-gray-700">{studentInfo.role === 'student' ? 'Học sinh' : studentInfo.role === 'business' ? 'Doanh nghiệp' : studentInfo.role === 'parent' ? 'Phụ huynh' : 'Quản trị viên'}</p>
+              </div>
+            </div>
+          </div>
+          {studentInfo.bio && (
+            <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+              <p className="text-sm text-gray-600 leading-relaxed italic">"{studentInfo.bio}"</p>
+            </div>
+          )}
+        </div>
+
         {/* Teen CV Section */}
         <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
           <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-6">

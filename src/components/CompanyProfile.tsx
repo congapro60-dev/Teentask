@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, MapPin, Globe, Mail, Phone, Star, ShieldCheck, Briefcase } from 'lucide-react';
-import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc } from 'firebase/firestore';
+import { ArrowLeft, MapPin, Globe, Mail, Phone, Star, ShieldCheck, Briefcase, User } from 'lucide-react';
+import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot } from 'firebase/firestore';
 import { db, useFirebase } from './FirebaseProvider';
-import { Job, Rating } from '../types';
+import { Job, Rating, UserProfile, Relationship } from '../types';
 
 // Import MOCK_JOBS to display them for mock companies
 const MOCK_JOBS = [
@@ -70,11 +70,37 @@ const MOCK_JOBS = [
 export default function CompanyProfile() {
   const { businessId } = useParams<{ businessId: string }>();
   const navigate = useNavigate();
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile, toggleFollowUser, createChat } = useFirebase();
   const [activeTab, setActiveTab] = useState<'jobs' | 'reviews' | 'about'>('jobs');
   const [loading, setLoading] = useState(true);
-  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [companyInfo, setCompanyInfo] = useState<UserProfile | null>(null);
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+
+  const isFollowing = currentUserProfile?.following?.includes(businessId || '');
+
+  const handleFollowAction = async () => {
+    if (!businessId) return;
+    try {
+      await toggleFollowUser(businessId);
+    } catch (error) {
+      console.error("Error follow action:", error);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!companyInfo) return;
+    try {
+      const chatId = await createChat(businessId!, {
+        displayName: companyInfo.displayName,
+        photoURL: companyInfo.photoURL,
+        role: companyInfo.role
+      });
+      navigate(`/messages/${chatId}`);
+    } catch (error) {
+      console.error("Error starting chat:", error);
+    }
+  };
 
   const BOSS_EMAIL = "congapro60@gmail.com";
   const isCurrentUserBoss = currentUserProfile?.email === BOSS_EMAIL;
@@ -158,6 +184,16 @@ export default function CompanyProfile() {
           };
         }
 
+        // Fetch confirmed relationships (Representatives)
+        const qRels = query(
+          collection(db, 'relationships'),
+          where('relatedUserId', '==', businessId),
+          where('status', '==', 'accepted'),
+          where('type', '==', 'Professional')
+        );
+        const relSnap = await getDocs(qRels);
+        setRelationships(relSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Relationship)));
+
         setCompanyInfo(info || {
           displayName: 'Doanh nghiệp ẩn danh',
           photoURL: 'https://picsum.photos/seed/business/200/200',
@@ -207,9 +243,24 @@ export default function CompanyProfile() {
                 />
               </div>
             </div>
-            <button className="px-6 py-2.5 bg-[#4F46E5] text-white text-sm font-bold rounded-full shadow-lg shadow-indigo-200">
-              Theo dõi
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleMessage}
+                className="px-4 py-2.5 bg-white border-2 border-gray-100 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-50 transition-all"
+              >
+                Nhắn tin
+              </button>
+              <button 
+                onClick={handleFollowAction}
+                className={`px-6 py-2.5 text-sm font-bold rounded-full shadow-lg transition-all ${
+                  isFollowing 
+                  ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-none' 
+                  : 'bg-[#4F46E5] text-white shadow-indigo-200'
+                }`}
+              >
+                {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
+              </button>
+            </div>
           </div>
 
           <div>
@@ -360,28 +411,60 @@ export default function CompanyProfile() {
             )}
 
             {activeTab === 'about' && (
-              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-2">Về chúng tôi</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {companyInfo?.displayName} là một trong những công ty hàng đầu trong lĩnh vực công nghệ và truyền thông. Chúng tôi luôn tìm kiếm những tài năng trẻ, đặc biệt là các bạn học sinh, sinh viên có đam mê và nhiệt huyết để cùng xây dựng những sản phẩm đột phá.
-                  </p>
+              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2">Về chúng tôi</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {companyInfo?.displayName} là một trong những công ty hàng đầu trong lĩnh vực công nghệ và truyền thông. Chúng tôi luôn tìm kiếm những tài năng trẻ, đặc biệt là các bạn học sinh, sinh viên có đam mê và nhiệt huyết để cùng xây dựng những sản phẩm đột phá.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <Globe size={18} className="text-gray-400" />
+                      <a href="#" className="text-[#4F46E5] hover:underline">www.{companyInfo?.displayName?.toLowerCase().replace(/\s+/g, '')}.com</a>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <Mail size={18} className="text-gray-400" />
+                      <span>contact@{companyInfo?.displayName?.toLowerCase().replace(/\s+/g, '')}.com</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <Phone size={18} className="text-gray-400" />
+                      <span>0123 456 789</span>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Globe size={18} className="text-gray-400" />
-                    <a href="#" className="text-[#4F46E5] hover:underline">www.{companyInfo?.displayName?.toLowerCase().replace(/\s+/g, '')}.com</a>
+
+                {relationships.length > 0 && (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <ShieldCheck size={18} className="text-indigo-600" />
+                      Người đại diện đã xác thực
+                    </h3>
+                    <div className="space-y-3">
+                      {relationships.map(rel => (
+                        <div key={rel.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-gray-100">
+                              {rel.userPhoto ? (
+                                <img src={rel.userPhoto} alt={rel.userName} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <User size={20} />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-900">{rel.userName}</p>
+                              <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">{rel.title}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Mail size={18} className="text-gray-400" />
-                    <span>contact@{companyInfo?.displayName?.toLowerCase().replace(/\s+/g, '')}.com</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Phone size={18} className="text-gray-400" />
-                    <span>0123 456 789</span>
-                  </div>
-                </div>
+                )}
               </div>
             )}
           </motion.div>

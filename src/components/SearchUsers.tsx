@@ -154,7 +154,10 @@ export default function SearchUsers() {
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between"
               >
-                <div className="flex items-center gap-4">
+                <div 
+                  className="flex items-center gap-4 cursor-pointer"
+                  onClick={() => navigate(user.role === 'business' ? `/company/${user.uid}` : `/student/${user.uid}`)}
+                >
                   <div className="w-12 h-12 rounded-xl bg-gray-50 overflow-hidden border border-gray-100">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />

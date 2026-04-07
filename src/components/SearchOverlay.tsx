@@ -106,9 +106,11 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     }
   };
 
-  const handleResultClick = (type: string, id: string) => {
+  const handleResultClick = (type: string, id: string, role?: string) => {
     onClose();
-    if (type === 'user') navigate(`/profile/${id}`);
+    if (type === 'user') {
+      navigate(role === 'business' ? `/company/${id}` : `/student/${id}`);
+    }
     if (type === 'job') navigate(`/jobs`);
   };
 
@@ -251,7 +253,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                           {results.users.map(user => (
                             <button 
                               key={user.id}
-                              onClick={() => handleResultClick('user', user.id)}
+                              onClick={() => handleResultClick('user', user.id, user.role)}
                               className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl transition-colors"
                             >
                               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-100">

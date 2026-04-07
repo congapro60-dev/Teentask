@@ -68,12 +68,16 @@ interface FirebaseContextType {
   acceptFriendRequest: (requestId: string) => Promise<void>;
   rejectFriendRequest: (requestId: string) => Promise<void>;
   addRelationship: (relatedUserId: string, relatedUserName: string, relatedUserPhoto: string | undefined, type: 'Family' | 'Professional', title: string) => Promise<void>;
+  acceptRelationship: (relId: string) => Promise<void>;
+  rejectRelationship: (relId: string) => Promise<void>;
   submitRating: (toId: string, score: number, comment?: string, jobId?: string) => Promise<void>;
   createChat: (otherUserId: string, otherUserDetails: any, relatedTo?: { type: string, id: string, title: string }) => Promise<string>;
   sendNotification: (userId: string, title: string, message: string, type: string, link?: string) => Promise<void>;
   toggleSaveJob: (jobId: string) => Promise<void>;
   toggleSaveShadowing: (shadowingId: string) => Promise<void>;
   submitNameChangeRequest: (newName: string, reason: string, proofUrl: string) => Promise<void>;
+  toggleFollowUser: (targetUserId: string) => Promise<void>;
+  unfriendUser: (targetUserId: string) => Promise<void>;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
@@ -267,20 +271,41 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addRelationship = async (relatedUserId: string, relatedUserName: string, relatedUserPhoto: string | undefined, type: 'Family' | 'Professional', title: string) => {
-    if (!user) return;
+    if (!user || !profile) return;
     const path = 'relationships';
     try {
       const relId = `${user.uid}_${relatedUserId}`;
       await setDoc(doc(db, 'relationships', relId), cleanData({
         id: relId,
         userId: user.uid,
+        userName: profile.displayName,
+        userPhoto: profile.photoURL,
         relatedUserId,
         relatedUserName,
         relatedUserPhoto,
         type,
         title,
+        status: 'pending',
         createdAt: Date.now()
       }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const acceptRelationship = async (relId: string) => {
+    const path = `relationships/${relId}`;
+    try {
+      await setDoc(doc(db, 'relationships', relId), { status: 'accepted' }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const rejectRelationship = async (relId: string) => {
+    const path = `relationships/${relId}`;
+    try {
+      await setDoc(doc(db, 'relationships', relId), { status: 'rejected' }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -402,12 +427,64 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toggleFollowUser = async (targetUserId: string) => {
+    if (!user || !profile) return;
+    const following = profile.following || [];
+    const isFollowing = following.includes(targetUserId);
+    
+    const myProfileRef = doc(db, 'users', user.uid);
+    const theirProfileRef = doc(db, 'users', targetUserId);
+    
+    try {
+      if (isFollowing) {
+        // Unfollow
+        await updateDoc(myProfileRef, { following: following.filter(id => id !== targetUserId) });
+        const theirSnap = await getDoc(theirProfileRef);
+        if (theirSnap.exists()) {
+          const theirFollowers = theirSnap.data()?.followers || [];
+          await updateDoc(theirProfileRef, { followers: theirFollowers.filter((id: string) => id !== user.uid) });
+        }
+      } else {
+        // Follow
+        await updateDoc(myProfileRef, { following: [...following, targetUserId] });
+        const theirSnap = await getDoc(theirProfileRef);
+        if (theirSnap.exists()) {
+          const theirFollowers = theirSnap.data()?.followers || [];
+          await updateDoc(theirProfileRef, { followers: [...theirFollowers, user.uid] });
+        }
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${targetUserId}`);
+    }
+  };
+
+  const unfriendUser = async (targetUserId: string) => {
+    if (!user || !profile) return;
+    const myFriends = profile.friends || [];
+    
+    const myProfileRef = doc(db, 'users', user.uid);
+    const theirProfileRef = doc(db, 'users', targetUserId);
+    
+    try {
+      await updateDoc(myProfileRef, { friends: myFriends.filter(id => id !== targetUserId) });
+      const theirSnap = await getDoc(theirProfileRef);
+      if (theirSnap.exists()) {
+        const theirFriends = theirSnap.data()?.friends || [];
+        await updateDoc(theirProfileRef, { friends: theirFriends.filter((id: string) => id !== user.uid) });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${targetUserId}`);
+    }
+  };
+
   return (
     <FirebaseContext.Provider value={{ 
       user, profile, loading, login, logout, updateProfile, 
       sendFriendRequest, acceptFriendRequest, rejectFriendRequest, 
-      addRelationship, submitRating, createChat, sendNotification,
-      toggleSaveJob, toggleSaveShadowing, submitNameChangeRequest
+      addRelationship, acceptRelationship, rejectRelationship,
+      submitRating, createChat, sendNotification,
+      toggleSaveJob, toggleSaveShadowing, submitNameChangeRequest,
+      toggleFollowUser, unfriendUser
     }}>
       {children}
     </FirebaseContext.Provider>

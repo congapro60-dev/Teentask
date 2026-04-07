@@ -10,12 +10,18 @@ import { PREDEFINED_SKILLS } from '../constants';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { profile, logout, updateProfile, acceptFriendRequest, rejectFriendRequest, addRelationship, submitRating, submitNameChangeRequest } = useFirebase();
+  const { 
+    profile, logout, updateProfile, 
+    acceptFriendRequest, rejectFriendRequest, 
+    addRelationship, acceptRelationship, rejectRelationship,
+    submitRating, submitNameChangeRequest 
+  } = useFirebase();
   const [applications, setApplications] = useState<(Application & { job?: Job })[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [relationshipRequests, setRelationshipRequests] = useState<Relationship[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -209,7 +215,7 @@ export default function Profile() {
       console.error("Error in friend requests listener:", error);
     });
 
-    // Listen to relationships
+    // Listen to outgoing relationships
     const qRels = query(
       collection(db, 'relationships'),
       where('userId', '==', auth.currentUser.uid)
@@ -220,9 +226,22 @@ export default function Profile() {
       console.error("Error in relationships listener:", error);
     });
 
+    // Listen to incoming relationship requests
+    const qRelRequests = query(
+      collection(db, 'relationships'),
+      where('relatedUserId', '==', auth.currentUser.uid),
+      where('status', '==', 'pending')
+    );
+    const unsubRelRequests = onSnapshot(qRelRequests, (snapshot) => {
+      setRelationshipRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Relationship)));
+    }, (error) => {
+      console.error("Error in relationship requests listener:", error);
+    });
+
     return () => {
       unsubRequests();
       unsubRels();
+      unsubRelRequests();
     };
   }, []);
 
@@ -544,6 +563,21 @@ export default function Profile() {
               )}
             </div>
             <p className="text-xs font-bold text-gray-400 mt-2">{profile?.email}</p>
+            
+            <div className="flex items-center justify-center gap-6 mt-4">
+              <div className="text-center">
+                <p className="text-lg font-black text-gray-900">{profile?.friends?.length || 0}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Bạn bè</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-gray-900">{profile?.following?.length || 0}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Đang theo dõi</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-gray-900">{profile?.followers?.length || 0}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Người theo dõi</p>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 w-full max-w-md mt-8">
@@ -645,15 +679,62 @@ export default function Profile() {
               </div>
             )}
 
+            {/* Relationship Requests */}
+            {relationshipRequests.length > 0 && (
+              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-amber-100 bg-amber-50/30">
+                <h3 className="font-bold text-amber-900 flex items-center gap-2 mb-4">
+                  <Heart size={18} className="text-amber-500" />
+                  Yêu cầu mối quan hệ ({relationshipRequests.length})
+                </h3>
+                <div className="space-y-3">
+                  {relationshipRequests.map(rel => (
+                    <div key={rel.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-amber-100 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-50 overflow-hidden border border-gray-100">
+                          {rel.userPhoto ? (
+                            <img src={rel.userPhoto} alt={rel.userName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <User size={24} />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{rel.userName}</p>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                            Muốn xác nhận là: <span className="text-indigo-600">{rel.title}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => rejectRelationship(rel.id)}
+                          className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                        <button 
+                          onClick={() => acceptRelationship(rel.id)}
+                          className="p-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors shadow-sm"
+                        >
+                          <Check size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Relationships */}
             <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
                 <Heart size={18} className="text-red-500" />
-                Mối quan hệ ({relationships.length})
+                Mối quan hệ ({relationships.filter(r => r.status === 'accepted').length})
               </h3>
               <div className="grid grid-cols-1 gap-3">
-                {relationships.length > 0 ? (
-                  relationships.map(rel => (
+                {relationships.filter(r => r.status === 'accepted').length > 0 ? (
+                  relationships.filter(r => r.status === 'accepted').map(rel => (
                     <div key={rel.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl">
                       <div className="w-12 h-12 rounded-2xl bg-white overflow-hidden border border-gray-100">
                         {rel.relatedUserPhoto ? (
@@ -673,12 +754,23 @@ export default function Profile() {
                             {rel.type === 'Family' ? 'Gia đình' : 'Công việc'}
                           </span>
                           <span className="text-[10px] text-gray-400 font-bold">• {rel.title}</span>
+                          <span className="text-[10px] text-green-600 font-black uppercase tracking-widest ml-auto">Đã xác thực</span>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-xs text-gray-400 py-4">Chưa có mối quan hệ nào được thiết lập.</p>
+                  <div className="space-y-4">
+                    {relationships.filter(r => r.status === 'pending').length > 0 && (
+                      <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100">
+                        <p className="text-[10px] text-amber-700 font-bold flex items-center gap-2">
+                          <Clock size={12} />
+                          Bạn có {relationships.filter(r => r.status === 'pending').length} yêu cầu đang chờ phản hồi
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-center text-xs text-gray-400 py-4">Chưa có mối quan hệ nào được xác thực.</p>
+                  </div>
                 )}
               </div>
             </div>

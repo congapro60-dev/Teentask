@@ -57,6 +57,8 @@ export interface UserProfile {
     accountHolder: string;
   };
   friends?: string[];
+  following?: string[];
+  followers?: string[];
 }
 
 export interface FriendRequest {
@@ -73,11 +75,14 @@ export interface FriendRequest {
 export interface Relationship {
   id: string;
   userId: string;
+  userName?: string;
+  userPhoto?: string;
   relatedUserId: string;
   relatedUserName: string;
   relatedUserPhoto?: string;
   type: 'Family' | 'Professional';
   title: string; // 'Father', 'Mother', 'Son', 'Daughter', 'Director', 'Manager', etc.
+  status: 'pending' | 'accepted' | 'rejected';
   createdAt: number;
 }
 
