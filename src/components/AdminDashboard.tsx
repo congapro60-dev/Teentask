@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [selectedNameChange, setSelectedNameChange] = useState<any>(null);
   const [replyText, setReplyText] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [autoApprove, setAutoApprove] = useState(false);
 
   const BOSS_EMAIL = "congapro60@gmail.com";
   const ADMIN_EMAIL = "cuong.vuviet@thedeweyschools.edu.vn";
@@ -34,6 +35,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (firebaseLoading || !isAdmin) return;
     
+    // Fetch settings
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'admin'), (doc) => {
+      if (doc.exists()) {
+        setAutoApprove(doc.data().autoApprove || false);
+      }
+    });
+
     setLoading(true);
     const unsubUsers = onSnapshot(query(collection(db, 'users')), (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -66,13 +74,24 @@ export default function AdminDashboard() {
     });
 
     const unsubNameChanges = onSnapshot(query(collection(db, 'name_change_requests'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setNameChangeRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNameChangeRequests(requests);
+      
+      // Auto-approve logic
+      if (autoApprove) {
+        requests.forEach(async (req: any) => {
+          if (req.status === 'pending') {
+            await handleApproveNameChange(req.id, 'approved', req.newName, req.userId);
+          }
+        });
+      }
     }, (error) => {
       console.error("Error in name changes listener:", error);
     });
 
     setLoading(false);
     return () => {
+      unsubSettings();
       unsubUsers();
       unsubJobs();
       unsubAds();
@@ -80,7 +99,15 @@ export default function AdminDashboard() {
       unsubTransactions();
       unsubNameChanges();
     };
-  }, [firebaseLoading, isAdmin]);
+  }, [firebaseLoading, isAdmin, autoApprove]);
+
+  const toggleAutoApprove = async () => {
+    try {
+      await setDoc(doc(db, 'settings', 'admin'), { autoApprove: !autoApprove }, { merge: true });
+    } catch (error) {
+      console.error("Error toggling auto-approve:", error);
+    }
+  };
 
   const handleVerify = async (userId: string, status: 'verified' | 'rejected') => {
     setActionLoading(true);
@@ -208,12 +235,6 @@ export default function AdminDashboard() {
         const matchesSearch = !searchQuery || ad.title.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesFilter && matchesSearch;
       });
-    } else if (activeTab === 'transactions') {
-      return transactions.filter(tx => {
-        const matchesFilter = filter === 'all' || tx.status === filter;
-        const matchesSearch = !searchQuery || tx.description.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesFilter && matchesSearch;
-      });
     } else if (activeTab === 'name_changes') {
       return nameChangeRequests.filter(req => {
         const matchesFilter = filter === 'all' || req.status === filter;
@@ -269,7 +290,6 @@ export default function AdminDashboard() {
               { id: 'jobs', label: 'Công việc', icon: Briefcase },
               { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
               { id: 'ads', label: 'Quảng cáo', icon: Megaphone },
-              { id: 'transactions', label: 'Giao dịch', icon: CheckCircle2 },
               { id: 'name_changes', label: 'Đổi tên', icon: UserCog },
             ].map((tab) => (
               <button
@@ -288,8 +308,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1 group">
+        <div className="flex flex-col md:flex-row gap-4 mb-8 items-center">
+          <div className="relative flex-1 group w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4F46E5] transition-colors" size={20} />
             <input
               type="text"
@@ -299,7 +319,23 @@ export default function AdminDashboard() {
               className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-[24px] text-sm font-medium focus:border-[#4F46E5]/20 focus:ring-4 focus:ring-[#4F46E5]/5 outline-none transition-all shadow-sm"
             />
           </div>
-          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex gap-1">
+          
+          <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-gray-100 gap-2 shrink-0">
+            <button
+              onClick={toggleAutoApprove}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                autoApprove 
+                  ? "bg-green-600 text-white shadow-lg shadow-green-100" 
+                  : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+              )}
+            >
+              <Zap size={14} fill={autoApprove ? "currentColor" : "none"} />
+              {autoApprove ? "Duyệt tự động: ON" : "Duyệt thủ công: ON"}
+            </button>
+          </div>
+
+          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex gap-1 shrink-0">
             {[
               { id: 'all', label: 'Tất cả' },
               { id: 'pending', label: 'Chờ duyệt' },
@@ -463,76 +499,6 @@ export default function AdminDashboard() {
                     <MessageSquare size={14} /> {msg.replied ? 'Xem lại' : 'Trả lời'}
                   </button>
                 </div>
-              </motion.div>
-            ))}
-
-            {activeTab === 'transactions' && filteredData().map((tx: any) => (
-              <motion.div
-                key={tx.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-indigo-100/50 transition-all group"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-gray-900">{tx.description}</h3>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{new Date(tx.createdAt).toLocaleString()}</p>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                    tx.status === 'completed' ? 'bg-green-50 text-green-600 border-green-100' : 
-                    tx.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                    'bg-red-50 text-red-600 border-red-100'
-                  }`}>
-                    {tx.status === 'completed' ? 'Thành công' : tx.status === 'pending' ? 'Chờ duyệt' : 'Thất bại'}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-gray-500">Số tiền:</span>
-                  <span className="font-black text-lg text-indigo-600">{tx.amount.toLocaleString()}đ</span>
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-gray-500">Mã giao dịch:</span>
-                  <span className="font-mono text-xs text-gray-400">{tx.id}</span>
-                </div>
-                {tx.status === 'pending' && (
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={async () => {
-                        try {
-                          await updateDoc(doc(db, 'transactions', tx.id), { status: 'failed' });
-                        } catch (error) {
-                          console.error("Error updating transaction:", error);
-                        }
-                      }}
-                      className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-bold hover:bg-red-100 transition-colors"
-                    >
-                      Từ chối
-                    </button>
-                    <button 
-                      onClick={async () => {
-                        try {
-                          // Approve transaction
-                          await updateDoc(doc(db, 'transactions', tx.id), { status: 'completed' });
-                          
-                          // Update user balance
-                          const userRef = doc(db, 'users', tx.userId);
-                          const userDoc = await getDoc(userRef);
-                          if (userDoc.exists()) {
-                            const currentBalance = userDoc.data().balance || 0;
-                            await updateDoc(userRef, { balance: currentBalance + tx.amount });
-                          }
-                        } catch (error) {
-                          console.error("Error approving transaction:", error);
-                        }
-                      }}
-                      className="flex-[2] py-3 bg-indigo-600 text-white rounded-2xl text-xs font-bold hover:bg-indigo-700 transition-colors"
-                    >
-                      Phê duyệt
-                    </button>
-                  </div>
-                )}
               </motion.div>
             ))}
 

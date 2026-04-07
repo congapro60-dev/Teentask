@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Award, CheckCircle2, Circle, Star, Zap, Trophy, ArrowLeft, ChevronRight, Clock, Target } from 'lucide-react';
+import { Award, CheckCircle2, Star, Zap, Trophy, ArrowLeft, ChevronRight, Clock, Target, Gift, MessageSquare, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFirebase } from './FirebaseProvider';
+import { useFirebase, db } from './FirebaseProvider';
+import { doc, updateDoc, increment, arrayUnion, addDoc, collection } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 
 interface Task {
@@ -13,22 +14,138 @@ interface Task {
   type: 'daily' | 'achievement';
   status: 'available' | 'completed' | 'claimed';
   progress?: { current: number; total: number };
+  path: string;
+  icon: any;
 }
 
 export default function Tasks() {
   const navigate = useNavigate();
   const { profile } = useFirebase();
   const [activeTab, setActiveTab] = useState<'daily' | 'achievement'>('daily');
+  const [claiming, setClaiming] = useState<string | null>(null);
 
   const tasks: Task[] = [
-    { id: '1', title: 'Đăng nhập hàng ngày', desc: 'Nhận thưởng điểm uy tín mỗi ngày', reward: 5, type: 'daily', status: 'completed' },
-    { id: '2', title: 'Ứng tuyển 1 công việc', desc: 'Bắt đầu hành trình tìm kiếm trải nghiệm', reward: 20, type: 'daily', status: 'available' },
-    { id: '3', title: 'Hoàn thành hồ sơ', desc: 'Cập nhật đầy đủ thông tin cá nhân', reward: 50, type: 'achievement', status: 'claimed' },
-    { id: '4', title: 'Chiến binh kiến tập', desc: 'Hoàn thành 3 khóa kiến tập cao cấp', reward: 200, type: 'achievement', status: 'available', progress: { current: 1, total: 3 } },
-    { id: '5', title: 'Người dùng tích cực', desc: 'Nhận 10 đánh giá 5 sao từ doanh nghiệp', reward: 500, type: 'achievement', status: 'available', progress: { current: 4, total: 10 } },
+    { 
+      id: 'daily-1', 
+      title: 'Điểm danh hàng ngày', 
+      desc: 'Đăng nhập vào ứng dụng mỗi ngày để nhận thưởng', 
+      reward: 10, 
+      type: 'daily', 
+      status: profile?.lastCheckIn === new Date().toDateString() ? 'claimed' : 'completed',
+      path: '/',
+      icon: Clock
+    },
+    { 
+      id: 'daily-2', 
+      title: 'Khám phá việc làm', 
+      desc: 'Xem ít nhất 5 tin tuyển dụng mới trong ngày', 
+      reward: 20, 
+      type: 'daily', 
+      status: 'available',
+      path: '/jobs',
+      icon: Zap
+    },
+    { 
+      id: 'daily-3', 
+      title: 'Chia sẻ dự án', 
+      desc: 'Chia sẻ thông tin dự án TeenTask lên mạng xã hội', 
+      reward: 50, 
+      type: 'daily', 
+      status: 'available',
+      path: '/about',
+      icon: Target
+    },
+    { 
+      id: 'daily-4', 
+      title: 'Tham gia khảo sát', 
+      desc: 'Hoàn thành khảo sát đóng góp ý kiến cho dự án', 
+      reward: 100, 
+      type: 'daily', 
+      status: 'available',
+      path: '/survey',
+      icon: MessageSquare
+    },
+    { 
+      id: 'daily-5', 
+      title: 'Tìm hiểu phần mềm', 
+      desc: 'Đọc hướng dẫn sử dụng các tính năng chính', 
+      reward: 30, 
+      type: 'daily', 
+      status: 'available',
+      path: '/about',
+      icon: Info
+    },
+    { 
+      id: 'ach-1', 
+      title: 'Người mới năng nổ', 
+      desc: 'Hoàn thành hồ sơ cá nhân đạt 100%', 
+      reward: 100, 
+      type: 'achievement', 
+      status: profile?.bio ? 'completed' : 'available',
+      progress: { current: profile?.bio ? 100 : 50, total: 100 },
+      path: '/profile',
+      icon: Trophy
+    },
+    { 
+      id: 'ach-2', 
+      title: 'Chiến binh kiến tập', 
+      desc: 'Hoàn thành 3 khóa kiến tập cao cấp', 
+      reward: 200, 
+      type: 'achievement', 
+      status: 'available', 
+      progress: { current: 1, total: 3 },
+      path: '/shadowing',
+      icon: Award
+    },
+    { 
+      id: 'ach-3', 
+      title: 'Người dùng tích cực', 
+      desc: 'Nhận 10 đánh giá 5 sao từ doanh nghiệp', 
+      reward: 500, 
+      type: 'achievement', 
+      status: 'available', 
+      progress: { current: 4, total: 10 },
+      path: '/jobs',
+      icon: Star
+    },
   ];
 
   const filteredTasks = tasks.filter(t => t.type === activeTab);
+
+  const handleClaimReward = async (task: Task) => {
+    if (!profile || claiming) return;
+    setClaiming(task.id);
+    try {
+      const userRef = doc(db, 'users', profile.uid);
+      const updates: any = {
+        trustScore: increment(task.reward),
+        claimedTasks: arrayUnion(task.id)
+      };
+
+      if (task.id === 'daily-1') {
+        updates.lastCheckIn = new Date().toDateString();
+      }
+
+      await updateDoc(userRef, updates);
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: profile.uid,
+        title: 'Nhận thưởng thành công',
+        message: `Bạn đã nhận được ${task.reward} điểm từ nhiệm vụ: ${task.title}`,
+        type: 'reward',
+        read: false,
+        createdAt: Date.now()
+      });
+    } catch (error) {
+      console.error("Error claiming reward:", error);
+    } finally {
+      setClaiming(null);
+    }
+  };
+
+  const handlePerformTask = (task: Task) => {
+    navigate(task.path);
+  };
 
   const getUserLevelInfo = (score: number) => {
     if (score < 100) return { title: 'Tân binh', min: 0, max: 100 };
@@ -126,7 +243,7 @@ export default function Tasks() {
                   "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
                   task.status === 'claimed' ? "bg-slate-100 text-slate-400" : "bg-blue-50 text-blue-500"
                 )}>
-                  {task.status === 'claimed' ? <CheckCircle2 size={24} /> : <Zap size={24} />}
+                  <task.icon size={24} />
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -154,7 +271,8 @@ export default function Tasks() {
                 </div>
 
                 <button
-                  disabled={task.status === 'claimed'}
+                  disabled={task.status === 'claimed' || claiming === task.id}
+                  onClick={() => task.status === 'completed' ? handleClaimReward(task) : handlePerformTask(task)}
                   className={cn(
                     "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                     task.status === 'available' ? "bg-slate-900 text-white hover:bg-slate-800" :
@@ -162,7 +280,8 @@ export default function Tasks() {
                     "bg-slate-100 text-slate-400"
                   )}
                 >
-                  {task.status === 'available' ? 'Thực hiện' :
+                  {claiming === task.id ? 'Đang xử lý...' : 
+                   task.status === 'available' ? 'Thực hiện' :
                    task.status === 'completed' ? 'Nhận quà' :
                    'Đã nhận'}
                 </button>

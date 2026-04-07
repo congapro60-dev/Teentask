@@ -478,6 +478,29 @@ export default function Jobs() {
               );
             })}
           </div>
+
+          <div className="w-px h-6 bg-gray-100 mx-1 self-center"></div>
+
+          {/* Location Quick Filter */}
+          <div className="flex gap-2">
+            {['TP.HCM', 'Hà Nội', 'Đà Nẵng'].map((loc) => {
+              const isSelected = locationFilter === loc;
+              return (
+                <button
+                  key={loc}
+                  onClick={() => setLocationFilter(isSelected ? '' : loc)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap border transition-all flex items-center gap-1.5 ${
+                    isSelected 
+                    ? 'bg-indigo-50 text-[#4F46E5] border-indigo-200' 
+                    : 'bg-gray-50 text-gray-500 border-transparent hover:border-gray-200'
+                  }`}
+                >
+                  <MapPin size={12} />
+                  {loc}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -514,7 +537,7 @@ export default function Jobs() {
                           e.stopPropagation();
                           navigate(`/company/${job.businessId}`);
                         }}
-                        className="text-xs text-gray-400 font-bold uppercase tracking-wider cursor-pointer hover:text-[#4F46E5] transition-colors"
+                        className="text-sm text-gray-400 font-bold uppercase tracking-wider cursor-pointer hover:text-[#4F46E5] transition-colors"
                       >
                         {job.company}
                       </p>
@@ -612,24 +635,64 @@ export default function Jobs() {
             </motion.div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <Search size={48} className="mb-4 opacity-20" />
-            <p className="text-sm font-bold">Không tìm thấy công việc phù hợp</p>
-            <button 
-              onClick={() => {
-                setSearchQuery('');
-                setActiveCategory('Tất cả');
-                setJobType('All');
-                setSalaryRange([0, 1000000]);
-                setDeadlineFilter('');
-                setLocationFilter('');
-                setSelectedSkills([]);
-              }}
-              className="mt-4 text-[#4F46E5] text-xs font-bold"
-            >
-              Xóa tất cả bộ lọc
-            </button>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="col-span-full flex flex-col items-center justify-center py-20 px-6 text-center"
+          >
+            <div className="w-48 h-48 bg-indigo-50 rounded-full flex items-center justify-center mb-8 relative">
+              <Search size={64} className="text-indigo-200" />
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 10, -10, 0]
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
+                className="absolute -top-2 -right-2 w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center border border-indigo-50"
+              >
+                <X size={24} className="text-red-400" />
+              </motion.div>
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Không tìm thấy công việc phù hợp</h3>
+            <p className="text-sm text-gray-500 max-w-xs mb-8">
+              Thử thay đổi từ khóa tìm kiếm hoặc xóa bớt các bộ lọc để có nhiều kết quả hơn nhé!
+            </p>
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveCategory('Tất cả');
+                  setJobType('All');
+                  setSalaryRange([0, 1000000]);
+                  setDeadlineFilter('');
+                  setLocationFilter('');
+                  setSelectedSkills([]);
+                }}
+                className="w-full py-4 bg-[#4F46E5] text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-[#4338CA] transition-all"
+              >
+                XÓA TẤT CẢ BỘ LỌC
+              </button>
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="w-full py-4 bg-white text-gray-600 rounded-2xl text-sm font-black border border-gray-200 hover:bg-gray-50 transition-all"
+              >
+                THỬ TỪ KHÓA KHÁC
+              </button>
+            </div>
+            
+            <div className="mt-12 grid grid-cols-2 gap-4 w-full max-w-md">
+              <div className="p-4 bg-white rounded-2xl border border-gray-100 text-left">
+                <Sparkles size={20} className="text-amber-400 mb-2" />
+                <h4 className="text-xs font-bold text-gray-900 mb-1">Gợi ý 1</h4>
+                <p className="text-[10px] text-gray-500 leading-relaxed">Sử dụng các từ khóa ngắn gọn như "Design", "IT", "Viết lách".</p>
+              </div>
+              <div className="p-4 bg-white rounded-2xl border border-gray-100 text-left">
+                <MapPin size={20} className="text-indigo-400 mb-2" />
+                <h4 className="text-xs font-bold text-gray-900 mb-1">Gợi ý 2</h4>
+                <p className="text-[10px] text-gray-500 leading-relaxed">Thử tìm kiếm ở các khu vực lân cận hoặc chọn "Toàn quốc".</p>
+              </div>
+            </div>
+          </motion.div>
         )}
       </div>
 

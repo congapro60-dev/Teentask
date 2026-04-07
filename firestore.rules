@@ -32,6 +32,18 @@ service cloud.firestore {
     // Collection: shadowing_bookings
     // Fields: id, userId, eventId, eventTitle, eventDate, company, status, createdAt
     //
+    // Collection: name_change_requests
+    // Fields: id, userId, oldName, newName, reason, proofUrl, status, createdAt
+    //
+    // Collection: friend_requests
+    // Fields: id, fromId, toId, status, createdAt
+    //
+    // Collection: relationships
+    // Fields: id, userId, relatedUserId, type, title, status, createdAt
+    //
+    // Collection: transactions
+    // Fields: id, userId, amount, type, description, status, createdAt
+    //
     // ===============================================================
 
     // ===============================================================
@@ -220,6 +232,13 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /name_change_requests/{requestId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

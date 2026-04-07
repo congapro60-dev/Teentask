@@ -28,41 +28,50 @@ export default function ChatRoom() {
       : chatId || '';
 
     const fetchChat = async () => {
-      if (isBotChat) {
-        // Check if bot chat doc exists in Firestore
-        const botChatDoc = await getDoc(doc(db, 'chats', actualChatId));
-        if (botChatDoc.exists()) {
-          setChat({ id: botChatDoc.id, ...botChatDoc.data() } as Chat);
-        } else {
-          // Create the bot chat document immediately to avoid permission issues for messages
-          const botChatData = {
-            participants: [auth.currentUser?.uid || '', TEENTASK_BOT_ID],
-            participantDetails: {
-              [auth.currentUser?.uid || '']: {
-                displayName: auth.currentUser?.displayName || 'User',
-                photoURL: auth.currentUser?.photoURL || null
+      try {
+        if (isBotChat) {
+          // Check if bot chat doc exists in Firestore
+          const botChatDoc = await getDoc(doc(db, 'chats', actualChatId));
+          if (botChatDoc.exists()) {
+            setChat({ id: botChatDoc.id, ...botChatDoc.data() } as Chat);
+          } else {
+            // Create the bot chat document immediately
+            const botChatData = {
+              participants: [auth.currentUser?.uid || '', TEENTASK_BOT_ID],
+              participantDetails: {
+                [auth.currentUser?.uid || '']: {
+                  displayName: auth.currentUser?.displayName || 'User',
+                  photoURL: auth.currentUser?.photoURL || null
+                },
+                [TEENTASK_BOT_ID]: {
+                  displayName: 'TeenTask Assistant',
+                  photoURL: null,
+                  role: 'bot'
+                }
               },
-              [TEENTASK_BOT_ID]: {
-                displayName: 'TeenTask Assistant',
-                photoURL: null,
-                role: 'bot'
-              }
-            },
-            lastMessage: 'Chào bạn! Tôi có thể giúp gì cho bạn về TeenTask?',
-            lastMessageAt: Date.now(),
-            createdAt: Date.now()
-          };
-          
-          const { setDoc } = await import('firebase/firestore');
-          await setDoc(doc(db, 'chats', actualChatId), botChatData).catch(err => console.error("Error creating bot chat:", err));
-          
-          setChat({ id: actualChatId, ...botChatData } as any as Chat);
+              lastMessage: 'Chào bạn! Tôi có thể giúp gì cho bạn về TeenTask?',
+              lastMessageAt: Date.now(),
+              createdAt: Date.now()
+            };
+            
+            const { setDoc } = await import('firebase/firestore');
+            await setDoc(doc(db, 'chats', actualChatId), botChatData);
+            setChat({ id: actualChatId, ...botChatData } as any as Chat);
+          }
+        } else {
+          const chatDoc = await getDoc(doc(db, 'chats', actualChatId));
+          if (chatDoc.exists()) {
+            setChat({ id: chatDoc.id, ...chatDoc.data() } as Chat);
+          } else {
+            // If it's a user-to-user chat and doesn't exist, we might need to derive details
+            // But usually this is handled by createChat in FirebaseProvider
+            console.warn("Chat document does not exist:", actualChatId);
+            setLoading(false);
+          }
         }
-      } else {
-        const chatDoc = await getDoc(doc(db, 'chats', actualChatId));
-        if (chatDoc.exists()) {
-          setChat({ id: chatDoc.id, ...chatDoc.data() } as Chat);
-        }
+      } catch (err) {
+        console.error("Error fetching chat details:", err);
+        setLoading(false);
       }
     };
     fetchChat();
@@ -177,80 +186,80 @@ export default function ChatRoom() {
     const isBot = otherParticipantUid === TEENTASK_BOT_ID;
 
     return (
-      <div className="flex flex-col h-screen bg-slate-950">
+      <div className="flex flex-col h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-slate-900/50 p-8 pt-12 rounded-b-[48px] border-b border-white/5 backdrop-blur-2xl sticky top-0 z-30">
-          <div className="flex items-center gap-6">
+        <div className="bg-white p-6 pt-10 rounded-b-[40px] border-b border-gray-100 shadow-sm backdrop-blur-2xl sticky top-0 z-30">
+          <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/messages')}
-              className="p-4 bg-white/5 rounded-[24px] text-white hover:bg-white/10 transition-all border border-white/10 active:scale-90"
+              className="p-3 bg-gray-50 rounded-2xl text-gray-600 hover:bg-gray-100 transition-all border border-gray-100 active:scale-90"
             >
-              <ChevronLeft size={24} strokeWidth={3} className="text-white" />
+              <ChevronLeft size={20} strokeWidth={3} />
             </button>
             
-            <div className="flex-1 flex items-center gap-5">
+            <div className="flex-1 flex items-center gap-4">
               <div className="relative">
-                <div className={`w-16 h-16 rounded-[28px] flex items-center justify-center overflow-hidden border-4 shadow-2xl ${
-                  isBot ? 'bg-primary/20 border-primary/20' : 'bg-slate-900 border-white/5'
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden border-2 shadow-sm ${
+                  isBot ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-gray-100'
                 }`}>
                   {isBot ? (
-                    <Bot size={28} className="text-primary" strokeWidth={3} />
+                    <Bot size={24} className="text-primary" strokeWidth={3} />
                   ) : otherParticipant?.photoURL ? (
                     <img src={otherParticipant.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <span className="text-xl font-black text-primary">
+                    <span className="text-lg font-black text-primary">
                       {otherParticipant?.displayName?.charAt(0)}
                     </span>
                   )}
                 </div>
-                <div className={`absolute -bottom-1 -right-1 w-6 h-6 border-4 border-slate-950 rounded-full shadow-lg ${
+                <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full shadow-sm ${
                   isBot ? 'bg-primary' : 'bg-emerald-500'
                 }`}></div>
               </div>
               <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-black tracking-tighter text-white leading-tight">{otherParticipant?.displayName}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black tracking-tight text-gray-900 leading-tight">{otherParticipant?.displayName}</h3>
                   {isBot && (
-                    <span className="px-3 py-1 bg-primary/20 text-primary text-[8px] font-black uppercase tracking-widest rounded-full border border-primary/20">AI BOT</span>
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary text-[7px] font-black uppercase tracking-widest rounded-full border border-primary/20">AI BOT</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full animate-pulse shadow-lg ${
-                    isBot ? 'bg-primary shadow-primary/50' : 'bg-emerald-500 shadow-emerald-500/50'
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                    isBot ? 'bg-primary' : 'bg-emerald-500'
                   }`}></div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${
+                  <span className={`text-[9px] font-black uppercase tracking-widest ${
                     isBot ? 'text-primary' : 'text-emerald-500'
                   }`}>Đang hoạt động</span>
                 </div>
               </div>
             </div>
 
-          <div className="flex items-center gap-3">
-            <button className="p-4 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-[24px] transition-all active:scale-90 border border-transparent hover:border-primary/20">
-              <Phone size={22} strokeWidth={3} />
+          <div className="flex items-center gap-2">
+            <button className="p-3 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all active:scale-90">
+              <Phone size={18} strokeWidth={3} />
             </button>
-            <button className="p-4 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-[24px] transition-all active:scale-90 border border-transparent hover:border-primary/20">
-              <Video size={22} strokeWidth={3} />
+            <button className="p-3 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all active:scale-90">
+              <Video size={18} strokeWidth={3} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-8 space-y-10 scroll-smooth no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth no-scrollbar">
         {chat?.relatedTo && (
-          <div className="flex justify-center mb-12">
+          <div className="flex justify-center mb-8">
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[32px] border border-white/5 shadow-2xl flex items-center gap-5"
+              className="bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4"
             >
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center shadow-inner border border-primary/10">
-                <Sparkles size={20} className="text-primary" strokeWidth={3} />
+              <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center border border-primary/10">
+                <Sparkles size={18} className="text-primary" strokeWidth={3} />
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-1">Liên quan đến</p>
-                <p className="text-sm font-black text-white tracking-tight">{chat.relatedTo.title}</p>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-0.5">Liên quan đến</p>
+                <p className="text-xs font-bold text-gray-900 tracking-tight">{chat.relatedTo.title}</p>
               </div>
             </motion.div>
           </div>
@@ -263,25 +272,24 @@ export default function ChatRoom() {
               (messages[index].createdAt - messages[index-1].createdAt > 300000); // 5 mins gap
 
             return (
-              <div key={msg.id} className="space-y-4">
+              <div key={msg.id} className="space-y-3">
                 {showTime && (
-                  <div className="flex justify-center py-8">
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] bg-white/5 border border-white/5 px-6 py-2 rounded-full shadow-inner">
+                  <div className="flex justify-center py-4">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] bg-white border border-gray-100 px-4 py-1.5 rounded-full shadow-sm">
                       {format(msg.createdAt, 'HH:mm, dd/MM', { locale: vi })}
                     </span>
                   </div>
                 )}
                 <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <motion.div
-                    initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                    initial={{ scale: 0.9, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
-                    className={`max-w-[85%] p-6 rounded-[32px] text-sm font-bold shadow-2xl leading-relaxed tracking-tight relative overflow-hidden ${
+                    className={`max-w-[80%] p-4 rounded-[24px] text-sm font-medium shadow-sm leading-relaxed tracking-tight relative ${
                       isMe 
-                        ? 'bg-primary text-white rounded-tr-none shadow-primary/20' 
-                        : 'bg-white/5 text-slate-200 rounded-tl-none border border-white/5 backdrop-blur-sm'
+                        ? 'bg-primary text-white rounded-tr-none' 
+                        : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                     }`}
                   >
-                    {isMe && <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>}
                     <p className="relative z-10">{msg.text}</p>
                   </motion.div>
                 </div>
@@ -293,14 +301,14 @@ export default function ChatRoom() {
       </div>
 
       {/* Input Area */}
-      <div className="p-8 bg-slate-950/80 backdrop-blur-2xl border-t border-white/5 pb-12">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-4 bg-white/5 p-3 rounded-[40px] border border-white/5 shadow-inner group focus-within:bg-white/10 focus-within:border-primary/20 focus-within:ring-8 focus-within:ring-primary/5 transition-all max-w-4xl mx-auto">
-          <div className="flex items-center gap-2 pl-2">
-            <button type="button" className="p-4 text-slate-500 hover:text-primary transition-all active:scale-90 hover:bg-primary/10 rounded-[28px]">
-              <Image size={24} strokeWidth={3} />
+      <div className="p-6 bg-white border-t border-gray-100 pb-10">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-3 bg-gray-50 p-2 rounded-[32px] border border-gray-200 focus-within:bg-white focus-within:border-primary/20 focus-within:ring-4 focus-within:ring-primary/5 transition-all max-w-4xl mx-auto">
+          <div className="flex items-center gap-1 pl-1">
+            <button type="button" className="p-3 text-gray-400 hover:text-primary transition-all active:scale-90 hover:bg-primary/5 rounded-2xl">
+              <Image size={20} strokeWidth={3} />
             </button>
-            <button type="button" className="p-4 text-slate-500 hover:text-primary transition-all active:scale-90 hover:bg-primary/10 rounded-[28px]">
-              <Smile size={24} strokeWidth={3} />
+            <button type="button" className="p-3 text-gray-400 hover:text-primary transition-all active:scale-90 hover:bg-primary/5 rounded-2xl">
+              <Smile size={20} strokeWidth={3} />
             </button>
           </div>
           
@@ -309,20 +317,20 @@ export default function ChatRoom() {
             placeholder="Viết tin nhắn..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1 py-5 px-4 bg-transparent border-none text-sm font-black text-white placeholder:text-slate-600 focus:ring-0 outline-none"
+            className="flex-1 py-3 px-2 bg-transparent border-none text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:ring-0 outline-none"
           />
           
           <motion.button
             whileTap={{ scale: 0.9 }}
             type="submit"
             disabled={!newMessage.trim()}
-            className={`w-16 h-16 rounded-[28px] flex items-center justify-center transition-all active:scale-90 ${
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-90 ${
               newMessage.trim() 
-                ? 'bg-primary text-white shadow-2xl shadow-primary/30' 
-                : 'bg-white/5 text-slate-600'
+                ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                : 'bg-gray-200 text-gray-400'
             }`}
           >
-            <Send size={24} strokeWidth={3} />
+            <Send size={20} strokeWidth={3} />
           </motion.button>
         </form>
       </div>

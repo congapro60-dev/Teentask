@@ -1,4 +1,4 @@
-import { Info, ArrowRight, Target, Rocket, Users, ShieldCheck, GraduationCap } from 'lucide-react';
+import { Info, ArrowRight, Target, Rocket, Users, ShieldCheck, GraduationCap, BookOpen, Search, MessageSquare, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
@@ -94,6 +94,39 @@ export default function AboutApp() {
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{f.title}</h3>
                 <p className="text-gray-600 leading-relaxed">{f.desc}</p>
               </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* User Guide Section */}
+        <section className="space-y-12">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-50 text-[#1877F2] rounded-2xl">
+              <BookOpen size={24} />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-gray-900">Hướng dẫn sử dụng</h2>
+              <p className="text-gray-500">4 bước đơn giản để bắt đầu hành trình của bạn</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: Users, title: 'Đăng ký', desc: 'Tạo tài khoản và chọn vai trò phù hợp (Học sinh, Phụ huynh hoặc Doanh nghiệp).' },
+              { icon: Search, title: 'Tìm kiếm', desc: 'Khám phá hàng ngàn cơ hội việc làm và kiến tập phù hợp với sở thích.' },
+              { icon: MessageSquare, title: 'Kết nối', desc: 'Trò chuyện trực tiếp với nhà tuyển dụng và nhận tư vấn từ chuyên gia.' },
+              { icon: Star, title: 'Phát triển', desc: 'Hoàn thành công việc, tích lũy TrustScore và xây dựng hồ sơ năng lực.' }
+            ].map((step, i) => (
+              <div key={i} className="relative p-6 bg-white border border-gray-100 rounded-[32px] shadow-sm hover:shadow-md transition-all">
+                <div className="absolute -top-4 -right-4 w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-black text-lg shadow-lg">
+                  {i + 1}
+                </div>
+                <div className="w-12 h-12 bg-blue-50 text-[#1877F2] rounded-2xl flex items-center justify-center mb-4">
+                  <step.icon size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">{step.title}</h3>
+                <p className="text-xs text-gray-500 leading-relaxed">{step.desc}</p>
+              </div>
             ))}
           </div>
         </section>

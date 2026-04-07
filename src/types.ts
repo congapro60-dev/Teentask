@@ -60,6 +60,8 @@ export interface UserProfile {
   following?: string[];
   followers?: string[];
   cvId?: string;
+  lastCheckIn?: string;
+  claimedTasks?: string[];
 }
 
 export interface CV {

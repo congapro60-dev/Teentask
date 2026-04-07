@@ -269,6 +269,46 @@ export default function JobDetail({
                     </ul>
                   </div>
                 </section>
+
+                {/* Map View */}
+                <section>
+                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-1.5 h-6 bg-[#4F46E5] rounded-full"></div>
+                    Bản đồ & Chỉ đường
+                  </h3>
+                  <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+                    <div className="aspect-video w-full bg-gray-100 relative">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0 }}
+                        src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(job.location)}`}
+                        allowFullScreen
+                        title="Job Location"
+                        className="grayscale hover:grayscale-0 transition-all duration-500"
+                        // Fallback if no API key is provided - using a simple search link or a placeholder
+                        onError={(e) => {
+                          (e.target as any).src = `https://maps.google.com/maps?q=${encodeURIComponent(job.location)}&output=embed`;
+                        }}
+                      />
+                      {/* Overlay to prevent accidental scrolling while navigating the modal */}
+                      <div className="absolute inset-0 pointer-events-none border-4 border-white/20 rounded-3xl"></div>
+                    </div>
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} className="text-[#4F46E5]" />
+                        <span className="text-xs font-bold text-gray-600 truncate max-w-[180px]">{job.location}</span>
+                      </div>
+                      <button 
+                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.location)}`, '_blank')}
+                        className="px-4 py-2 bg-indigo-50 text-[#4F46E5] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all"
+                      >
+                        Chỉ đường
+                      </button>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { Home, Briefcase, GraduationCap, MessageSquare, User, Heart, ShieldCheck, Bell, Search, Menu, X, LogOut, Settings, HelpCircle, Star, Info, PieChart, Calendar } from 'lucide-react';
+import { Home, Briefcase, GraduationCap, MessageSquare, User, Heart, ShieldCheck, Bell, Search, Menu, X, LogOut, Settings, HelpCircle, Star, Info, PieChart, Calendar, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -26,11 +26,16 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) {
+      setUnreadNotifications(0);
+      setUnreadMessages(0);
+      return;
+    }
     
     // Unread notifications
     const notifsQuery = query(
@@ -45,8 +50,24 @@ export default function Layout({ children }: LayoutProps) {
       console.error("Error fetching unread notifications:", error);
     });
 
+    // Unread messages - simple check for chats where user is participant
+    // In a real app, we'd have an unreadCount per participant in the chat doc
+    const chatsQuery = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', profile.uid)
+    );
+
+    const unsubChats = onSnapshot(chatsQuery, (snapshot) => {
+      // For now, we'll just count chats that have a lastMessageAt newer than some local "last seen" 
+      // or if we had a proper unread field. Since we don't have a robust unread system yet,
+      // we'll just keep it at 0 or implement a basic version if needed.
+      // But let's at least ensure it's managed.
+      setUnreadMessages(0); 
+    });
+
     return () => {
       unsubNotifs();
+      unsubChats();
     };
   }, [profile]);
 
@@ -56,6 +77,21 @@ export default function Layout({ children }: LayoutProps) {
       navigate('/');
     } catch (error) {
       console.error("Error signing out:", error);
+    }
+  };
+
+  const handleSwitchRole = async (role: string) => {
+    if (!profile) return;
+    // Only Boss can switch to admin
+    if (role === 'admin' && !isBoss) return;
+    
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'users', profile.uid), { role });
+      setIsRoleSwitcherOpen(false);
+      // The profile will auto-update via onSnapshot in FirebaseProvider
+    } catch (error) {
+      console.error("Error switching role:", error);
     }
   };
 
@@ -88,11 +124,12 @@ export default function Layout({ children }: LayoutProps) {
     ]
   };
 
-  const currentRoleItems = isBoss
+  const currentRoleItems = (isBoss && userRole === 'admin')
     ? roleSpecificItems.boss
-    : (isAdmin && userRole !== 'admin') 
+    : (!isBoss && isAdmin && userRole !== 'admin') 
       ? [...(roleSpecificItems[userRole as keyof typeof roleSpecificItems] || []), ...roleSpecificItems.admin]
       : (roleSpecificItems[userRole as keyof typeof roleSpecificItems] || []);
+
   const allNavItems = [...mainNavItems, ...currentRoleItems];
 
   return (
@@ -114,70 +151,125 @@ export default function Layout({ children }: LayoutProps) {
           </h1>
         </div>
 
-        <div className="flex-1 max-w-md mx-4 flex items-center gap-4">
+        <div className="flex-1 min-w-0 mx-2 sm:mx-4 flex items-center gap-2 sm:gap-4">
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="flex-1 bg-[#F0F2F5] hover:bg-gray-200 rounded-full py-2 px-4 flex items-center gap-3 text-gray-500 transition-all text-sm group"
+            className="flex-1 bg-[#F0F2F5] hover:bg-gray-200 rounded-full py-2 px-3 sm:px-4 flex items-center gap-2 sm:gap-3 text-gray-500 transition-all text-xs sm:text-sm group truncate"
           >
-            <Search size={18} className="group-hover:scale-110 transition-transform" />
-            <span className="hidden md:inline">Tìm kiếm trên TeenTask</span>
-            <span className="md:inline hidden">...</span>
-            <span className="md:hidden">Tìm kiếm...</span>
+            <Search size={16} className="group-hover:scale-110 transition-transform shrink-0" />
+            <span className="hidden md:inline truncate">Tìm kiếm trên TeenTask</span>
+            <span className="md:hidden inline truncate">Tìm kiếm...</span>
           </button>
-          <div className="hidden sm:block">
+          <div className="hidden lg:block shrink-0">
             <Clock />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {profile?.email === "congapro60@gmail.com" ? (
-            <div className="hidden lg:flex items-center gap-1 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-red-600 text-[10px] font-black uppercase tracking-widest mr-2">
-              Boss
-            </div>
-          ) : profile?.role === 'admin' ? (
-            <div className="hidden lg:flex items-center gap-1 px-3 py-1 bg-indigo-50 border border-indigo-200 rounded-full text-indigo-600 text-[10px] font-black uppercase tracking-widest mr-2">
-              Admin
-            </div>
-          ) : profile?.isVip && (
-            <div className="hidden lg:flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-600 text-[10px] font-black uppercase tracking-widest mr-2">
-              <Star size={12} fill="currentColor" />
-              VIP Member
-            </div>
-          )}
-          
-          <div className="hidden md:flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {!profile ? (
             <button 
-              onClick={() => navigate('/search-users')}
-              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all relative group"
-              title="Tìm kiếm người dùng"
+              onClick={() => navigate('/profile')}
+              className="px-4 py-2 bg-gradient-to-r from-[#1877F2] to-[#4F46E5] text-white rounded-full text-xs sm:text-sm font-black uppercase tracking-widest hover:shadow-lg hover:shadow-blue-200 transition-all active:scale-95 flex items-center gap-2 border border-white/20"
             >
-              <Search size={20} />
+              <LogOut size={16} className="rotate-180" />
+              <span>Đăng nhập</span>
             </button>
-          </div>
-
-          <button 
-            onClick={() => navigate('/wallet')}
-            className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all relative group"
-            title="Ví của tôi"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-          </button>
-
-          <button 
-            onClick={() => navigate('/profile')}
-            className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-transparent hover:border-gray-300 transition-all relative"
-          >
-            {profile?.photoURL ? (
-              <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <User size={24} className="text-gray-500 m-auto" />
-            )}
-            {profile?.isVip && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
-                <Star size={8} className="text-white" fill="currentColor" />
+          ) : (
+            <>
+              <div className="relative">
+                <button 
+                  onClick={() => setIsRoleSwitcherOpen(!isRoleSwitcherOpen)}
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1 border rounded-full text-[10px] font-black uppercase tracking-widest mr-2 transition-all",
+                    isBoss 
+                      ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100" 
+                      : "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100"
+                  )}
+                >
+                  {isBoss ? "Boss" : "Vai trò"}: {userRole}
+                  <Settings size={10} className={cn("transition-transform", isRoleSwitcherOpen && "rotate-90")} />
+                </button>
+                
+                <AnimatePresence>
+                  {isRoleSwitcherOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute top-full left-0 mt-2 w-40 bg-white rounded-2xl shadow-xl border border-gray-100 z-[70] overflow-hidden p-1"
+                    >
+                      <div className="px-3 py-2 text-[8px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">Đổi vai trò trải nghiệm</div>
+                      {[
+                        { id: 'student', label: 'Học sinh', color: 'text-blue-600' },
+                        { id: 'parent', label: 'Phụ huynh', color: 'text-green-600' },
+                        { id: 'business', label: 'Doanh nghiệp', color: 'text-purple-600' },
+                        { id: 'admin', label: 'Quản trị viên', color: 'text-indigo-600', bossOnly: true },
+                      ].filter(r => !r.bossOnly || isBoss).map((r) => (
+                        <button
+                          key={r.id}
+                          onClick={() => handleSwitchRole(r.id)}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors flex items-center justify-between",
+                            userRole === r.id ? "bg-gray-50 " + r.color : "text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          {r.label}
+                          {userRole === r.id && <Check size={12} />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
-          </button>
+
+              {profile?.role === 'admin' && !isBoss && (
+                <div className="hidden lg:flex items-center gap-1 px-3 py-1 bg-indigo-50 border border-indigo-200 rounded-full text-indigo-600 text-[10px] font-black uppercase tracking-widest mr-2">
+                  Admin
+                </div>
+              )}
+              
+              {profile?.isVip && (
+                <div className="hidden lg:flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-600 text-[10px] font-black uppercase tracking-widest mr-2">
+                  <Star size={12} fill="currentColor" />
+                  VIP Member
+                </div>
+              )}
+              
+              <div className="hidden md:flex items-center gap-2">
+                <button 
+                  onClick={() => navigate('/search-users')}
+                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all relative group"
+                  title="Tìm kiếm người dùng"
+                >
+                  <Search size={20} />
+                </button>
+              </div>
+
+              <button 
+                onClick={() => navigate('/wallet')}
+                className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all relative group"
+                title="Ví của tôi"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+              </button>
+
+              <button 
+                onClick={() => navigate('/profile')}
+                className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-transparent hover:border-gray-300 transition-all relative"
+              >
+                {profile?.photoURL ? (
+                  <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <User size={24} className="text-gray-500 m-auto" />
+                )}
+                {profile?.isVip && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <Star size={8} className="text-white" fill="currentColor" />
+                  </div>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </header>
 

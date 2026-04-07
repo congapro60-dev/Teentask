@@ -31,32 +31,66 @@ export default function ParentVerificationModal({ isOpen, onClose, onSuccess }: 
     email: ''
   });
 
+  const [allParents, setAllParents] = useState<UserProfile[]>([]);
+
+  useEffect(() => {
+    const fetchInitialParents = async () => {
+      try {
+        const q = query(
+          collection(db, 'users'),
+          where('role', '==', 'parent'),
+          limit(50)
+        );
+        const snapshot = await getDocs(q);
+        const parents = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        setAllParents(parents);
+        setSearchResults(parents);
+      } catch (error) {
+        console.error("Error fetching initial parents:", error);
+      }
+    };
+    if (isOpen) fetchInitialParents();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(allParents);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = allParents.filter(p => 
+      p.displayName?.toLowerCase().includes(query) || 
+      p.email?.toLowerCase().includes(query)
+    );
+    setSearchResults(filtered);
+
+    // If no results in local cache, we could trigger a server search for longer queries
+    if (filtered.length === 0 && searchQuery.length > 3) {
+      handleSearch();
+    }
+  }, [searchQuery, allParents]);
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const q = query(
+      // Try a broader server search
+      const qName = query(
         collection(db, 'users'),
         where('role', '==', 'parent'),
-        where('email', '==', searchQuery.trim().toLowerCase()),
-        limit(5)
+        where('displayName', '>=', searchQuery),
+        where('displayName', '<=', searchQuery + '\uf8ff'),
+        limit(20)
       );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-      setSearchResults(results);
+      const snapshotName = await getDocs(qName);
+      const results = snapshotName.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
       
-      // If no results by email, try searching by name (prefix search)
-      if (results.length === 0) {
-        const qName = query(
-          collection(db, 'users'),
-          where('role', '==', 'parent'),
-          where('displayName', '>=', searchQuery),
-          where('displayName', '<=', searchQuery + '\uf8ff'),
-          limit(5)
-        );
-        const snapshotName = await getDocs(qName);
-        setSearchResults(snapshotName.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
-      }
+      // Merge with existing results and remove duplicates
+      setSearchResults(prev => {
+        const combined = [...prev, ...results];
+        return combined.filter((v, i, a) => a.findIndex(t => t.uid === v.uid) === i);
+      });
     } catch (error) {
       console.error("Error searching parents:", error);
     } finally {

@@ -83,7 +83,14 @@ function AppContent() {
   const { user, profile, loading, login, updateProfile } = useFirebase();
   const [view, setView] = useState<'guest' | 'login'>('guest');
   const [selectedRole, setSelectedRole] = useState<'student' | 'parent' | 'business' | 'admin' | null>(null);
-  const [skipVerification, setSkipVerification] = useState(false);
+  const [skipVerification, setSkipVerification] = useState(() => {
+    return localStorage.getItem('skipVerification') === 'true';
+  });
+
+  const handleSkipVerification = () => {
+    setSkipVerification(true);
+    localStorage.setItem('skipVerification', 'true');
+  };
 
   const ADMIN_EMAIL = "cuong.vuviet@thedeweyschools.edu.vn";
   const BOSS_EMAIL = "congapro60@gmail.com";
@@ -234,13 +241,13 @@ function AppContent() {
 
   // Verification Check: Only show flow if user hasn't submitted yet
   const hasSubmittedVerification = profile?.verificationSubmittedAt != null;
-  const needsVerification = userRole !== 'admin' && !hasSubmittedVerification && !skipVerification;
+  const needsVerification = userRole !== 'admin' && !hasSubmittedVerification && !skipVerification && !isBoss;
 
   if (needsVerification) {
     return (
       <div className="bg-white min-h-screen">
         <div className={appWrapperClass}>
-          <VerificationFlow onClose={() => setSkipVerification(true)} />
+          <VerificationFlow onClose={handleSkipVerification} />
         </div>
       </div>
     );

@@ -39,9 +39,15 @@ export default function Home() {
     const qShadowing = query(collection(db, 'shadowing_events'), limit(10));
     const unsubShadowing = onSnapshot(qShadowing, (snapshot) => {
       if (!snapshot.empty) {
-        setShadowingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShadowingEvent)));
+        setShadowingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+      } else {
+        setShadowingEvents(MOCK_SHADOWING as any);
       }
-    }, (error) => console.error("Shadowing listener error:", error));
+    }, (error) => {
+      console.error("Shadowing listener error:", error);
+      // Silent fallback for guests or permission issues
+      setShadowingEvents(MOCK_SHADOWING as any);
+    });
 
     return () => {
       unsubAds();
@@ -214,54 +220,121 @@ export default function Home() {
 
   return (
     <div className="pb-20">
-      {/* Welcome & Quick Stats */}
-      <section className="px-4 sm:px-6 py-6 bg-white border-b border-gray-100 mb-4">
-        <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
-          <div className="flex-1 min-w-[200px]">
-            <h2 className="text-xs text-gray-400 font-black uppercase tracking-[0.2em] mb-1">Chào buổi sáng,</h2>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-2 flex-wrap">
-              <span className="truncate max-w-full">{profile?.displayName || 'TeenTasker'}</span>
-              {profile?.isVip && <Star size={24} className="text-amber-500 shrink-0" fill="currentColor" />}
-              <span className="text-[#1877F2] shrink-0">👋</span>
-            </h1>
-            {profile?.isVip && (
-              <div className="mt-1 flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-amber-600 text-[8px] font-black uppercase tracking-widest w-fit">
-                <Star size={10} fill="currentColor" />
-                VIP Member
+      {/* Guest Welcome Hero */}
+      {!profile && (
+        <section className="px-4 sm:px-6 py-12 bg-gradient-to-br from-[#1877F2] via-[#4F46E5] to-[#7C3AED] mb-6 relative overflow-hidden rounded-b-[64px] shadow-2xl shadow-blue-100">
+          <div className="relative z-10 max-w-2xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-6">
+                <Sparkles size={14} className="text-amber-300" />
+                <span className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Khám phá tương lai của bạn</span>
               </div>
-            )}
+              
+              <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tighter mb-6 leading-[1.1]">
+                Nơi khởi đầu <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-400">sự nghiệp</span> cho Gen Z
+              </h1>
+              
+              <p className="text-white/80 text-base sm:text-lg mb-10 leading-relaxed max-w-lg mx-auto font-medium">
+                TeenTask kết nối hàng ngàn học sinh với các cơ hội việc làm và kiến tập thực tế từ những doanh nghiệp hàng đầu.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button 
+                  onClick={() => navigate('/profile')}
+                  className="w-full sm:w-auto px-10 py-5 bg-white text-[#1877F2] rounded-[24px] font-black uppercase tracking-widest text-sm shadow-[0_20px_40px_-12px_rgba(255,255,255,0.3)] hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-3 group"
+                >
+                  Đăng nhập ngay
+                  <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button 
+                  onClick={() => navigate('/about')}
+                  className="w-full sm:w-auto px-10 py-5 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-[24px] font-black uppercase tracking-widest text-sm hover:bg-white/20 transition-all"
+                >
+                  Tìm hiểu thêm
+                </button>
+              </div>
+            </motion.div>
           </div>
           
-          <div className="flex items-center gap-3 shrink-0">
-            {profile && (
+          {/* Decorative Elements */}
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-white/10 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[-10%] left-[-5%] w-64 h-64 bg-blue-400/20 rounded-full blur-[100px]"></div>
+          
+          {/* Floating Icons */}
+          <motion.div 
+            animate={{ y: [0, -20, 0], rotate: [12, 15, 12] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute right-10 top-20 hidden lg:block opacity-20"
+          >
+            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 flex items-center justify-center">
+              <Rocket size={40} className="text-white" />
+            </div>
+          </motion.div>
+          
+          <motion.div 
+            animate={{ y: [0, 20, 0], rotate: [-12, -15, -12] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-10 bottom-20 hidden lg:block opacity-20"
+          >
+            <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 flex items-center justify-center">
+              <Award size={32} className="text-white" />
+            </div>
+          </motion.div>
+        </section>
+      )}
+
+      {/* Welcome & Quick Stats */}
+      {profile && (
+        <section className="px-4 sm:px-6 py-6 bg-white border-b border-gray-100 mb-4">
+          <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
+            <div className="flex-1 min-w-[200px]">
+              <h2 className="text-xs text-gray-400 font-black uppercase tracking-[0.2em] mb-1">Chào buổi sáng,</h2>
+              <h1 className="text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-2 flex-wrap">
+                <span className="truncate max-w-full">{profile?.displayName || 'TeenTasker'}</span>
+                {profile?.isVip && <Star size={24} className="text-amber-500 shrink-0" fill="currentColor" />}
+                <span className="text-[#1877F2] shrink-0">👋</span>
+              </h1>
+              {profile?.isVip && (
+                <div className="mt-1 flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-amber-600 text-[8px] font-black uppercase tracking-widest w-fit">
+                  <Star size={10} fill="currentColor" />
+                  VIP Member
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-3 shrink-0">
               <div className="flex flex-col items-end">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Cấp độ</span>
                 <div className={`px-3 py-1.5 rounded-xl border font-bold text-xs shadow-sm ${getUserLevel(profile.trustScore).color}`}>
                   {getUserLevel(profile.trustScore).title}
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100">
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Việc làm</p>
-            <p className="text-xl font-black text-[#1877F2]">24</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100">
+              <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Việc làm</p>
+              <p className="text-xl font-black text-[#1877F2]">24</p>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-2xl border border-purple-100">
+              <p className="text-[10px] font-black text-purple-400 uppercase tracking-wider mb-1">Kiến tập</p>
+              <p className="text-xl font-black text-purple-600">12</p>
+            </div>
+            <div 
+              onClick={() => navigate('/trust-score')}
+              className="bg-amber-50 p-3 rounded-2xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
+            >
+              <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1">Điểm</p>
+              <p className="text-xl font-black text-amber-600">{profile?.trustScore ?? 0}</p>
+            </div>
           </div>
-          <div className="bg-purple-50 p-3 rounded-2xl border border-purple-100">
-            <p className="text-[10px] font-black text-purple-400 uppercase tracking-wider mb-1">Kiến tập</p>
-            <p className="text-xl font-black text-purple-600">12</p>
-          </div>
-          <div 
-            onClick={() => navigate('/trust-score')}
-            className="bg-amber-50 p-3 rounded-2xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
-          >
-            <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1">Điểm</p>
-            <p className="text-xl font-black text-amber-600">{profile?.trustScore ?? 0}</p>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Quick Actions */}
       <section className="px-4 sm:px-6 mb-6">
@@ -291,14 +364,17 @@ export default function Home() {
         title="Tin tức nổi bật" 
         icon={Zap}
         items={[
-          { id: 1, title: 'TeenTask ra mắt tính năng mới', image: 'https://picsum.photos/seed/news1/400/250', date: '2 giờ trước' },
-          { id: 2, title: 'Top 10 công việc mùa hè cho học sinh', image: 'https://picsum.photos/seed/news2/400/250', date: '5 giờ trước' },
-          { id: 3, title: 'Kỹ năng cần thiết trong kỷ nguyên AI', image: 'https://picsum.photos/seed/news3/400/250', date: '1 ngày trước' },
-          { id: 4, title: 'Hành trình khởi nghiệp của Gen Z', image: 'https://picsum.photos/seed/news4/400/250', date: '2 ngày trước' },
-          { id: 5, title: 'Bí quyết cân bằng học tập và làm thêm', image: 'https://picsum.photos/seed/news5/400/250', date: '3 ngày trước' },
+          { id: 'news-info', title: 'Thông tin dự án & Hướng dẫn sử dụng', image: 'https://picsum.photos/seed/project/400/250', date: 'Mới nhất', path: '/about' },
+          { id: 'news-survey', title: 'Tham gia khảo sát dự án TeenTask', image: 'https://picsum.photos/seed/survey/400/250', date: 'Mới nhất', path: '/survey' },
+          { id: 1, title: 'TeenTask ra mắt tính năng mới', image: 'https://picsum.photos/seed/news1/400/250', date: '2 giờ trước', path: '/news' },
+          { id: 2, title: 'Top 10 công việc mùa hè cho học sinh', image: 'https://picsum.photos/seed/news2/400/250', date: '5 giờ trước', path: '/news' },
+          { id: 3, title: 'Kỹ năng cần thiết trong kỷ nguyên AI', image: 'https://picsum.photos/seed/news3/400/250', date: '1 ngày trước', path: '/news' },
         ]}
         renderItem={(item: any) => (
-          <div className="w-[280px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div 
+            onClick={() => navigate(item.path || '/news')}
+            className="w-[280px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          >
             <img src={item.image} alt={item.title} className="w-full h-40 object-cover" referrerPolicy="no-referrer" />
             <div className="p-4">
               <span className="text-[10px] font-bold text-[#1877F2] uppercase tracking-wider">{item.date}</span>
